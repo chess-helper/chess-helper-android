@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.ChessHelper" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorPrimary">#4caf50</item>
+        <item name="colorPrimaryDark">#388e3c</item>
+        <item name="android:windowBackground">#0f0f1a</item>
+    </style>
+</resources>
