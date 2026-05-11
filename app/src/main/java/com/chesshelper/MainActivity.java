@@ -46,7 +46,13 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-        webView.setWebChromeClient(new WebChromeClient());
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onConsoleMessage(android.webkit.ConsoleMessage cm) {
+                android.util.Log.d("ChessHelper", cm.message());
+                return true;
+            }
+        });
         webView.loadUrl("https://lichess.org");
 
         findViewById(R.id.settingsBtn).setOnClickListener(v -> showSettings());
@@ -217,6 +223,7 @@ public class MainActivity extends AppCompatActivity {
         return
             "  function isFlipped() { return document.querySelector('.cg-wrap')&&document.querySelector('.cg-wrap').classList.contains('orientation-black'); }" +
             "  function getFen() {" +
+            "    console.log('ChessHelper: looking for board', document.querySelector('chess-board') ? 'found' : 'not found');" +
             "    var board = document.querySelector('cg-board');" +
             "    if (!board) return null;" +
             "    var pieces = board.querySelectorAll('piece');" +
