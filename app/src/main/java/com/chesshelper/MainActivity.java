@@ -249,25 +249,48 @@ public class MainActivity extends AppCompatActivity {
     private String getChessComFen() {
         return
             "  function isFlipped() {" +
-            "    var board = document.querySelector('chess-board, wc-chess-board');" +
-            "    if (!board) return false;" +
-            "    return board.getAttribute('flipped') !== null || board.classList.contains('flipped');" +
+            "    try {" +
+            "      var board = document.querySelector('chess-board');" +
+            "      if (board && board.game) return board.game.getIsFlipped ? board.game.getIsFlipped() : false;" +
+            "    } catch(e) {}" +
+            "    return false;" +
             "  }" +
             "  function getFen() {" +
-            "    var board = document.querySelector('chess-board, wc-chess-board');" +
-            "    if (!board) return null;" +
-            "    var fen = board.getAttribute('fen');" +
-            "    if (fen && fen.length > 10) return fen + ' w - - 0 1';" +
             "    try {" +
-            "      var keys = Object.keys(board);" +
-            "      for (var i=0; i<keys.length; i++) {" +
-            "        var val = board[keys[i]];" +
-            "        if (val && val.fen && typeof val.fen === 'function') return val.fen();" +
-            "        if (val && val.game && val.game.fen) return val.game.fen();" +
+            "      var board = document.querySelector('chess-board');" +
+            "      if (!board) return null;" +
+            "      if (board.game) {" +
+            "        if (board.game.getFEN) return board.game.getFEN();" +
+            "        if (board.game.fen) return board.game.fen();" +
             "      }" +
-            "    } catch(e) {}" +
-            "    try { if (window.chessboard && window.chessboard.game) return window.chessboard.game.fen(); } catch(e) {}" +
-            "    return null;" +
+            "      var el = board.shadowRoot || board;" +
+            "      var pieces = el.querySelectorAll('[class*=piece]');" +
+            "      if (!pieces.length) return null;" +
+            "      var grid = [];" +
+            "      for(var i=0;i<8;i++){grid.push([null,null,null,null,null,null,null,null]);}" +
+            "      var size = board.offsetWidth / 8;" +
+            "      pieces.forEach(function(p) {" +
+            "        var cls = p.className || '';" +
+            "        var typeM = cls.match(/\b([bwBW][prnbqkPRNBQK])\b/);" +
+            "        if (!typeM) return;" +
+            "        var pc = typeM[1];" +
+            "        var style = p.getAttribute('style') || '';" +
+            "        var topM = style.match(/top:\s*(\d+(?:\.\d+)?)%/);" +
+            "        var leftM = style.match(/left:\s*(\d+(?:\.\d+)?)%/);" +
+            "        if (!topM || !leftM) return;" +
+            "        var col = Math.round(parseFloat(leftM[1]) / 12.5);" +
+            "        var row = Math.round(parseFloat(topM[1]) / 12.5);" +
+            "        if(col<0||col>7||row<0||row>7) return;" +
+            "        var color = pc[0].toLowerCase() === 'w' ? 'white' : 'black';" +
+            "        var typeMap = {p:'p',r:'r',n:'n',b:'b',q:'q',k:'k'};" +
+            "        var ch = typeMap[pc[1].toLowerCase()];" +
+            "        if (!ch) return;" +
+            "        grid[row][col] = color === 'white' ? ch.toUpperCase() : ch;" +
+            "      });" +
+            "      var fen='';" +
+            "      for(var r=0;r<8;r++){var e=0;for(var c=0;c<8;c++){if(grid[r][c]){if(e){fen+=e;e=0;}fen+=grid[r][c];}else e++;}if(e)fen+=e;if(r<7)fen+='/';}" +
+            "      return fen + ' w - - 0 1';" +
+            "    } catch(e) { return null; }" +
             "  }";
     }
 
