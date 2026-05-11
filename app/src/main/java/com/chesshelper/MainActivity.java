@@ -1,29 +1,40 @@
 package com.chesshelper;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.webkit.*;
 import android.view.KeyEvent;
+import android.view.View;
+import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
 import java.io.InputStream;
 import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
     private WebView webView;
+    private int lines = 1;
+    private int depth = 12;
+    private SharedPreferences prefs;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        prefs = getSharedPreferences("chess_helper", MODE_PRIVATE);
+        lines = prefs.getInt("lines", 1);
+        depth = prefs.getInt("depth", 12);
+
         webView = findViewById(R.id.webView);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(true);
-        settings.setAllowContentAccess(true);
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
-        
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
@@ -32,6 +43,46 @@ public class MainActivity extends AppCompatActivity {
         });
         webView.setWebChromeClient(new WebChromeClient());
         webView.loadUrl("https://lichess.org");
+
+        // Кнопка настроек
+        findViewById(R.id.settingsBtn).setOnClickListener(v -> showSettings());
+    }
+
+    private void showSettings() {
+        View view = getLayoutInflater().inflate(R.layout.dialog_settings, null);
+
+        SeekBar depthBar = view.findViewById(R.id.depthBar);
+        TextView depthVal = view.findViewById(R.id.depthVal);
+        RadioGroup linesGroup = view.findViewById(R.id.linesGroup);
+
+        depthBar.setMax(17);
+        depthBar.setProgress(depth - 8);
+        depthVal.setText("Глубина: " + depth);
+        depthBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar s, int p, boolean u) { depthVal.setText("Глубина: " + (p + 8)); }
+            public void onStartTrackingTouch(SeekBar s) {}
+            public void onStopTrackingTouch(SeekBar s) {}
+        });
+
+        if (lines == 1) linesGroup.check(R.id.lines1);
+        else if (lines == 2) linesGroup.check(R.id.lines2);
+        else linesGroup.check(R.id.lines3);
+
+        new AlertDialog.Builder(this)
+            .setTitle("⚙️ Настройки")
+            .setView(view)
+            .setPositiveButton("Сохранить", (d, w) -> {
+                depth = depthBar.getProgress() + 8;
+                int checkedId = linesGroup.getCheckedRadioButtonId();
+                if (checkedId == R.id.lines1) lines = 1;
+                else if (checkedId == R.id.lines2) lines = 2;
+                else lines = 3;
+                prefs.edit().putInt("lines", lines).putInt("depth", depth).apply();
+                injectChessHelper();
+                Toast.makeText(this, "Настройки сохранены!", Toast.LENGTH_SHORT).show();
+            })
+            .setNegativeButton("Отмена", null)
+            .show();
     }
 
     private String loadStockfish() {
@@ -54,26 +105,32 @@ public class MainActivity extends AppCompatActivity {
 
         String js =
             "(function() {" +
-            "  if (window.__chessHelperInjected) return;" +
-            "  window.__chessHelperInjected = true;" +
-            "  var badge = document.createElement('div');" +
-            "  badge.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1a1a2e;color:#4caf50;padding:8px 14px;border-radius:8px;font-size:12px;z-index:9999;border:1px solid #4caf50;';" +
-            "  badge.textContent = '♟ Chess Helper Active';" +
-            "  document.body.appendChild(badge);" +
-            "  setTimeout(function(){badge.style.display='none';}, 3000);" +
+            "  window.__chessHelperInjected = false;" +
+            "  if (window.__sfWorker) { window.__sfWorker.terminate(); window.__sfWorker = null; }" +
+            "  var LINES = " + lines + ";" +
+            "  var DEPTH = " + depth + ";" +
             "  var sfCode = `" + sfCode + "`;" +
             "  var blob = new Blob([sfCode], {type:'application/javascript'});" +
             "  var sf = new Worker(URL.createObjectURL(blob));" +
+            "  window.__sfWorker = sf;" +
             "  var lastFen = '';" +
             "  var svgEl = null;" +
             "  var COLORS = ['#22c55e','#3b82f6','#f59e0b'];" +
+            "  var collectedMoves = [];" +
             "  sf.onmessage = function(e) {" +
             "    var line = e.data;" +
-            "    if (line === 'uciok') sf.postMessage('isready');" +
+            "    if (line === 'uciok') { sf.postMessage('setoption name MultiPV value ' + LINES); sf.postMessage('isready'); }" +
             "    else if (line === 'readyok') { setInterval(checkPos, 1000); }" +
+            "    else if (line.indexOf(' pv ') >= 0) {" +
+            "      var pvM = line.match(/ pv ([a-h][1-8][a-h][1-8][qrbn]?)/);" +
+            "      var mpM = line.match(/ multipv (\\d+)/);" +
+            "      if (pvM && mpM) collectedMoves[parseInt(mpM[1])-1] = pvM[1];" +
+            "    }" +
             "    else if (line.startsWith('bestmove')) {" +
             "      var bm = line.split(' ')[1];" +
-            "      if (bm && bm !== '(none)') drawArrow(bm);" +
+            "      if (bm && bm !== '(none)' && !collectedMoves[0]) collectedMoves[0] = bm;" +
+            "      drawArrows(collectedMoves.slice(0, LINES));" +
+            "      collectedMoves = [];" +
             "    }" +
             "  };" +
             "  sf.postMessage('uci');" +
@@ -82,8 +139,9 @@ public class MainActivity extends AppCompatActivity {
             "    if (!fen || fen === lastFen) return;" +
             "    lastFen = fen;" +
             "    clearArrows();" +
+            "    sf.postMessage('stop');" +
             "    sf.postMessage('position fen ' + fen);" +
-            "    sf.postMessage('go depth 12');" +
+            "    sf.postMessage('go depth ' + DEPTH);" +
             "  }" +
             "  function getFen() {" +
             "    var board = document.querySelector('cg-board');" +
@@ -135,25 +193,28 @@ public class MainActivity extends AppCompatActivity {
             "    });" +
             "    svgEl.appendChild(defs); parent.appendChild(svgEl); return svgEl;" +
             "  }" +
-            "  function drawArrow(move) {" +
+            "  function drawArrows(moves) {" +
             "    var svg=ensureSVG(); if(!svg) return;" +
             "    clearArrows();" +
             "    var flipped=document.querySelector('.cg-wrap')&&document.querySelector('.cg-wrap').classList.contains('orientation-black');" +
-            "    var from=move.substring(0,2); var to=move.substring(2,4);" +
-            "    var fx=(flipped?7-(from.charCodeAt(0)-97):(from.charCodeAt(0)-97))+0.5;" +
-            "    var fy=(flipped?parseInt(from[1])-1:7-(parseInt(from[1])-1))+0.5;" +
-            "    var tx=(flipped?7-(to.charCodeAt(0)-97):(to.charCodeAt(0)-97))+0.5;" +
-            "    var ty=(flipped?parseInt(to[1])-1:7-(parseInt(to[1])-1))+0.5;" +
-            "    var dx=tx-fx; var dy=ty-fy; var len=Math.sqrt(dx*dx+dy*dy);" +
-            "    if(len<0.01) return;" +
-            "    var ux=dx/len; var uy=dy/len;" +
-            "    var line=document.createElementNS('http://www.w3.org/2000/svg','line');" +
-            "    line.setAttribute('x1',fx); line.setAttribute('y1',fy);" +
-            "    line.setAttribute('x2',tx-ux*0.38); line.setAttribute('y2',ty-uy*0.38);" +
-            "    line.setAttribute('stroke','#22c55e'); line.setAttribute('stroke-width','0.2');" +
-            "    line.setAttribute('stroke-linecap','round'); line.setAttribute('marker-end','url(#ch-arrow-0)');" +
-            "    line.setAttribute('opacity','0.9'); line.classList.add('ch-arrow');" +
-            "    svg.appendChild(line);" +
+            "    moves.forEach(function(move, i) {" +
+            "      if(!move||move.length<4) return;" +
+            "      var from=move.substring(0,2); var to=move.substring(2,4);" +
+            "      var fx=(flipped?7-(from.charCodeAt(0)-97):(from.charCodeAt(0)-97))+0.5;" +
+            "      var fy=(flipped?parseInt(from[1])-1:7-(parseInt(from[1])-1))+0.5;" +
+            "      var tx=(flipped?7-(to.charCodeAt(0)-97):(to.charCodeAt(0)-97))+0.5;" +
+            "      var ty=(flipped?parseInt(to[1])-1:7-(parseInt(to[1])-1))+0.5;" +
+            "      var dx=tx-fx; var dy=ty-fy; var len=Math.sqrt(dx*dx+dy*dy);" +
+            "      if(len<0.01) return;" +
+            "      var ux=dx/len; var uy=dy/len;" +
+            "      var line=document.createElementNS('http://www.w3.org/2000/svg','line');" +
+            "      line.setAttribute('x1',fx); line.setAttribute('y1',fy);" +
+            "      line.setAttribute('x2',tx-ux*0.38); line.setAttribute('y2',ty-uy*0.38);" +
+            "      line.setAttribute('stroke',COLORS[i]||'#22c55e'); line.setAttribute('stroke-width',i===0?'0.2':'0.14');" +
+            "      line.setAttribute('stroke-linecap','round'); line.setAttribute('marker-end','url(#ch-arrow-'+i+')');" +
+            "      line.setAttribute('opacity',i===0?'0.9':'0.65'); line.classList.add('ch-arrow');" +
+            "      svg.appendChild(line);" +
+            "    });" +
             "  }" +
             "  function clearArrows() { if(svgEl) svgEl.querySelectorAll('.ch-arrow').forEach(function(el){el.remove();}); }" +
             "})();";
