@@ -5,6 +5,8 @@ import android.os.Bundle;
 import android.webkit.*;
 import android.view.KeyEvent;
 import androidx.appcompat.app.AppCompatActivity;
+import java.io.InputStream;
+import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
     private WebView webView;
@@ -19,7 +21,9 @@ public class MainActivity extends AppCompatActivity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
+        webView.addJavascriptInterface(new StockfishBridge(), "StockfishBridge");
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
@@ -30,8 +34,25 @@ public class MainActivity extends AppCompatActivity {
         webView.loadUrl("https://lichess.org");
     }
 
+    private String loadStockfish() {
+        try {
+            InputStream is = getAssets().open("stockfish.js");
+            byte[] buffer = new byte[is.available()];
+            is.read(buffer);
+            is.close();
+            return new String(buffer, "UTF-8");
+        } catch (IOException e) {
+            return "";
+        }
+    }
+
     private void injectChessHelper() {
-        webView.evaluateJavascript(
+        String sfCode = loadStockfish()
+            .replace("\\", "\\\\")
+            .replace("`", "\\`")
+            .replace("$", "\\$");
+
+        String js =
             "(function() {" +
             "  if (window.__chessHelperInjected) return;" +
             "  window.__chessHelperInjected = true;" +
@@ -40,9 +61,9 @@ public class MainActivity extends AppCompatActivity {
             "  badge.textContent = '♟ Chess Helper Active';" +
             "  document.body.appendChild(badge);" +
             "  setTimeout(function(){badge.style.display='none';}, 3000);" +
-            "  var sf = new Worker(URL.createObjectURL(new Blob([" +
-            "    'importScripts(\"https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js\");'" +
-            "  ], {type:'application/javascript'})));" +
+            "  var sfCode = `" + sfCode + "`;" +
+            "  var blob = new Blob([sfCode], {type:'application/javascript'});" +
+            "  var sf = new Worker(URL.createObjectURL(blob));" +
             "  var lastFen = '';" +
             "  var svgEl = null;" +
             "  var COLORS = ['#22c55e','#3b82f6','#f59e0b'];" +
@@ -69,13 +90,14 @@ public class MainActivity extends AppCompatActivity {
             "    if (!board) return null;" +
             "    var pieces = board.querySelectorAll('piece');" +
             "    if (!pieces.length) return null;" +
-            "    var flipped = document.querySelector('.cg-wrap')?.classList.contains('orientation-black') || false;" +
+            "    var flipped = document.querySelector('.cg-wrap') && document.querySelector('.cg-wrap').classList.contains('orientation-black');" +
             "    var bw = board.clientWidth || 480;" +
-            "    var grid = Array.from({length:8}, function(){return Array(8).fill(null);});" +
+            "    var grid = [];" +
+            "    for(var i=0;i<8;i++){grid.push([null,null,null,null,null,null,null,null]);}" +
             "    pieces.forEach(function(p) {" +
             "      var cls = Array.from(p.classList);" +
             "      var color = cls.find(function(c){return c==='white'||c==='black';});" +
-            "      var type = cls.find(function(c){return ['king','queen','rook','bishop','knight','pawn'].includes(c);});" +
+            "      var type = cls.find(function(c){return ['king','queen','rook','bishop','knight','pawn'].indexOf(c)>=0;});" +
             "      if (!color||!type) return;" +
             "      var style = p.getAttribute('style')||'';" +
             "      var col=-1,row=-1;" +
@@ -96,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
             "  function ensureSVG() {" +
             "    var board=document.querySelector('cg-board'); if(!board) return null;" +
             "    var parent=board.parentElement; if(!parent) return null;" +
-            "    if(parent.style.position==='') parent.style.position='relative';" +
+            "    if(!parent.style.position||parent.style.position==='static') parent.style.position='relative';" +
             "    if(svgEl&&parent.contains(svgEl)) return svgEl;" +
             "    svgEl=document.createElementNS('http://www.w3.org/2000/svg','svg');" +
             "    svgEl.setAttribute('viewBox','0 0 8 8');" +
@@ -116,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
             "  function drawArrow(move) {" +
             "    var svg=ensureSVG(); if(!svg) return;" +
             "    clearArrows();" +
-            "    var flipped=document.querySelector('.cg-wrap')?.classList.contains('orientation-black')||false;" +
+            "    var flipped=document.querySelector('.cg-wrap')&&document.querySelector('.cg-wrap').classList.contains('orientation-black');" +
             "    var from=move.substring(0,2); var to=move.substring(2,4);" +
             "    var fx=(flipped?7-(from.charCodeAt(0)-97):(from.charCodeAt(0)-97))+0.5;" +
             "    var fy=(flipped?parseInt(from[1])-1:7-(parseInt(from[1])-1))+0.5;" +
@@ -134,9 +156,9 @@ public class MainActivity extends AppCompatActivity {
             "    svg.appendChild(line);" +
             "  }" +
             "  function clearArrows() { if(svgEl) svgEl.querySelectorAll('.ch-arrow').forEach(function(el){el.remove();}); }" +
-            "})();",
-            null
-        );
+            "})();";
+
+        webView.evaluateJavascript(js, null);
     }
 
     @Override
