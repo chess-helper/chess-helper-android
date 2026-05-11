@@ -275,8 +275,8 @@ public class MainActivity extends AppCompatActivity {
             "        if (!typeM) return;" +
             "        var pc = typeM[1];" +
             "        var style = p.getAttribute('style') || '';" +
-            "        var topM = style.match(/top:[\\s]*(\\d+(?:\\.\\d+)?)%/);" +
-            "        var leftM = style.match(/left:[\\s]*(\\d+(?:\\.\\d+)?)%/);" +
+            "        var topM = style.indexOf('top:') >= 0 ? style.substring(style.indexOf('top:')+4).match(/([0-9.]+)%/) : null;" +
+            "        var leftM = style.indexOf('left:') >= 0 ? style.substring(style.indexOf('left:')+5).match(/([0-9.]+)%/) : null;" +
             "        if (!topM || !leftM) return;" +
             "        var col = Math.round(parseFloat(leftM[1]) / 12.5);" +
             "        var row = Math.round(parseFloat(topM[1]) / 12.5);" +
