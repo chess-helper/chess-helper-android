@@ -250,15 +250,23 @@ public class MainActivity extends AppCompatActivity {
         return
             "  function isFlipped() {" +
             "    var board = document.querySelector('chess-board, wc-chess-board');" +
-            "    return board && board.getAttribute('flipped') !== null;" +
+            "    if (!board) return false;" +
+            "    return board.getAttribute('flipped') !== null || board.classList.contains('flipped');" +
             "  }" +
             "  function getFen() {" +
             "    var board = document.querySelector('chess-board, wc-chess-board');" +
             "    if (!board) return null;" +
             "    var fen = board.getAttribute('fen');" +
-            "    if (fen) return fen + ' w - - 0 1';" +
-            "    var game = window.chess || window.game;" +
-            "    if (game && game.fen) return game.fen();" +
+            "    if (fen && fen.length > 10) return fen + ' w - - 0 1';" +
+            "    try {" +
+            "      var keys = Object.keys(board);" +
+            "      for (var i=0; i<keys.length; i++) {" +
+            "        var val = board[keys[i]];" +
+            "        if (val && val.fen && typeof val.fen === 'function') return val.fen();" +
+            "        if (val && val.game && val.game.fen) return val.game.fen();" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    try { if (window.chessboard && window.chessboard.game) return window.chessboard.game.fen(); } catch(e) {}" +
             "    return null;" +
             "  }";
     }
