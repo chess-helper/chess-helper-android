@@ -298,37 +298,8 @@ public class MainActivity extends AppCompatActivity {
             "      if (!wc || !wc.game) return null;" +
             "      return wc.game.getFEN();" +
             "    } catch(e) { return null; }" +
-            "  }" +
-                "    } catch(e) { return null; }" +
-                "  }" +
-            "      var pieces = el.querySelectorAll('[class*=piece]');" +
-            "      ChessDebug.show('wc-board pieces: ' + pieces.length + ' sr=' + (board.shadowRoot?'yes':'no'));" +
-            "      if (!pieces.length) return null;" +
-            "      var grid = [];" +
-            "      for(var i=0;i<8;i++){grid.push([null,null,null,null,null,null,null,null]);}" +
-            "      var size = board.offsetWidth / 8;" +
-            "      pieces.forEach(function(p) {" +
-            "        var cls = p.className || '';" +
-            "        var typeM = cls.match(/\b([bwBW][prnbqkPRNBQK])\b/);" +
-            "        if (!typeM) return;" +
-            "        var pc = typeM[1];" +
-            "        var style = p.getAttribute('style') || '';" +
-            "        var topM = style.indexOf('top:') >= 0 ? style.substring(style.indexOf('top:')+4).match(/([0-9.]+)%/) : null;" +
-            "        var leftM = style.indexOf('left:') >= 0 ? style.substring(style.indexOf('left:')+5).match(/([0-9.]+)%/) : null;" +
-            "        if (!topM || !leftM) return;" +
-            "        var col = Math.round(parseFloat(leftM[1]) / 12.5);" +
-            "        var row = Math.round(parseFloat(topM[1]) / 12.5);" +
-            "        if(col<0||col>7||row<0||row>7) return;" +
-            "        var color = pc[0].toLowerCase() === 'w' ? 'white' : 'black';" +
-            "        var typeMap = {p:'p',r:'r',n:'n',b:'b',q:'q',k:'k'};" +
-            "        var ch = typeMap[pc[1].toLowerCase()];" +
-            "        if (!ch) return;" +
-            "        grid[row][col] = color === 'white' ? ch.toUpperCase() : ch;" +
-            "      });" +
-            "      var fen='';" +
-            "      for(var r=0;r<8;r++){var e=0;for(var c=0;c<8;c++){if(grid[r][c]){if(e){fen+=e;e=0;}fen+=grid[r][c];}else e++;}if(e)fen+=e;if(r<7)fen+='/';}" +
-            "      return fen + ' w - - 0 1';" +
-            "    } catch(e) { return null; }" +
+            "  }";
+    }
             "  }";
     }
 
