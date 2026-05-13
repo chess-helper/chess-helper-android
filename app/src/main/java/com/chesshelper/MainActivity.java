@@ -239,7 +239,9 @@ public class MainActivity extends AppCompatActivity {
                 "      window.__boardFound = true;" +
                 "      var sr = board.shadowRoot;" +
                 "      var pieces = sr ? sr.querySelectorAll('[class*=piece]') : board.querySelectorAll('[class*=piece]');" +
-                "      ChessDebug.show('FOUND! pieces=' + pieces.length + ' sr=' + (sr?'yes':'no') + ' cls=' + board.className);" +
+                "    var fenStr = '';" +
+                "    try { var wc = document.querySelector('wc-chess-board'); var keys = Object.getOwnPropertyNames(wc); for(var k of keys){var v=wc[k];if(v&&typeof v==='object'&&v.fen){fenStr=v.fen();break;}if(v&&typeof v==='string'&&v.match&&v.match(/^[rnbqkp1-8\/]+ [wb]/i)){fenStr=v;break;}} } catch(ex) {}" +
+                "    ChessDebug.show('fen=' + (fenStr?fenStr.substring(0,40):'not found'));" +
                 "    }" +
                 "  });" +
                 "  window.__chessObserver.observe(document.body, {childList:true, subtree:true});" +
