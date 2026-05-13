@@ -38,7 +38,6 @@ public class MainActivity extends AppCompatActivity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
 
-        webView.addJavascriptInterface(new ChessDebugInterface(), "ChessDebug");
         webView.setWebViewClient(new WebViewClient() {
             private String lastUrl = "";
             @Override
@@ -57,13 +56,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public boolean onConsoleMessage(android.webkit.ConsoleMessage cm) {
-                android.util.Log.d("ChessHelper", cm.message());
-                return true;
-            }
-        });
+
+        webView.setWebChromeClient(new WebChromeClient());
         webView.loadUrl("https://lichess.org");
 
         findViewById(R.id.settingsBtn).setOnClickListener(v -> showSettings());
@@ -137,7 +131,6 @@ public class MainActivity extends AppCompatActivity {
             .replace("`", "\\`")
             .replace("$", "\\$");
 
-        // getFen function depends on site
         String getFenJs = isChessCom ? getChessComFen() : getLichessFen();
 
         String js =
@@ -151,8 +144,10 @@ public class MainActivity extends AppCompatActivity {
             "  window.__sfWorker = sf;" +
             "  var lastFen = '';" +
             "  var svgEl = null;" +
+            "  var scoreEl = null;" +
             "  var COLORS = ['#22c55e','#3b82f6','#f59e0b'];" +
             "  var collectedMoves = [];" +
+            "  var collectedScore = null;" +
             "  sf.onmessage = function(e) {" +
             "    var line = e.data;" +
             "    if (line === 'uciok') { sf.postMessage('setoption name MultiPV value ' + LINES); sf.postMessage('isready'); }" +
@@ -161,12 +156,20 @@ public class MainActivity extends AppCompatActivity {
             "      var pvM = line.match(/ pv ([a-h][1-8][a-h][1-8][qrbn]?)/);" +
             "      var mpM = line.match(/ multipv (\\d+)/);" +
             "      if (pvM && mpM) collectedMoves[parseInt(mpM[1])-1] = pvM[1];" +
+            "      if (mpM && parseInt(mpM[1]) === 1) {" +
+            "        var cpM = line.match(/ score cp (-?\\d+)/);" +
+            "        var mateM = line.match(/ score mate (-?\\d+)/);" +
+            "        if (mateM) collectedScore = {type:'mate', value:parseInt(mateM[1])};" +
+            "        else if (cpM) collectedScore = {type:'cp', value:parseInt(cpM[1])};" +
+            "      }" +
             "    }" +
             "    else if (line.startsWith('bestmove')) {" +
             "      var bm = line.split(' ')[1];" +
             "      if (bm && bm !== '(none)' && !collectedMoves[0]) collectedMoves[0] = bm;" +
             "      drawArrows(collectedMoves.slice(0, LINES));" +
+            "      renderScore(collectedScore);" +
             "      collectedMoves = [];" +
+            "      collectedScore = null;" +
             "    }" +
             "  };" +
             "  sf.postMessage('uci');" +
@@ -180,78 +183,91 @@ public class MainActivity extends AppCompatActivity {
             "    sf.postMessage('go depth ' + DEPTH);" +
             "  }" +
             getFenJs +
+            "  function renderScore(score) {" +
+            "    var board = document.querySelector('cg-board, wc-chess-board');" +
+            "    if (!board) return;" +
+            "    var parent = board.parentElement;" +
+            "    if (!parent) return;" +
+            "    if (!scoreEl || !parent.contains(scoreEl)) {" +
+            "      scoreEl = document.createElement('div');" +
+            "      scoreEl.style.cssText = 'position:absolute;top:4px;left:4px;z-index:200;background:rgba(0,0,0,0.75);color:#fff;font-family:monospace;font-size:13px;font-weight:bold;padding:3px 7px;border-radius:5px;pointer-events:none;';" +
+            "      if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative';" +
+            "      parent.appendChild(scoreEl);" +
+            "    }" +
+            "    if (!score) { scoreEl.style.display='none'; return; }" +
+            "    scoreEl.style.display = 'block';" +
+            "    var text, color;" +
+            "    if (score.type === 'mate') {" +
+            "      var v = score.value;" +
+            "      text = v > 0 ? 'M+' + v : 'M' + v;" +
+            "      color = v > 0 ? '#22c55e' : '#ef4444';" +
+            "    } else {" +
+            "      var p = (score.value / 100).toFixed(1);" +
+            "      var v = parseFloat(p);" +
+            "      text = v > 0 ? '+' + p : '' + p;" +
+            "      color = v > 0.3 ? '#22c55e' : v < -0.3 ? '#ef4444' : '#facc15';" +
+            "    }" +
+            "    scoreEl.textContent = text;" +
+            "    scoreEl.style.color = color;" +
+            "    scoreEl.style.borderLeft = '3px solid ' + color;" +
+            "  }" +
             "  function ensureSVG(boardEl) {" +
-            "    var parent=boardEl.parentElement; if(!parent) return null;" +
-            "    if(!parent.style.position||parent.style.position==='static') parent.style.position='relative';" +
-            "    if(svgEl&&parent.contains(svgEl)) return svgEl;" +
-            "    svgEl=document.createElementNS('http://www.w3.org/2000/svg','svg');" +
+            "    var parent = boardEl.parentElement; if (!parent) return null;" +
+            "    if (!parent.style.position || parent.style.position === 'static') parent.style.position = 'relative';" +
+            "    if (svgEl && parent.contains(svgEl)) return svgEl;" +
+            "    svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');" +
             "    svgEl.setAttribute('viewBox','0 0 8 8');" +
             "    svgEl.setAttribute('preserveAspectRatio','xMidYMid meet');" +
-            "    svgEl.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100;';" +
-            "    var defs=document.createElementNS('http://www.w3.org/2000/svg','defs');" +
-            "    COLORS.forEach(function(color,i){" +
-            "      var marker=document.createElementNS('http://www.w3.org/2000/svg','marker');" +
+            "    svgEl.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100;';" +
+            "    var defs = document.createElementNS('http://www.w3.org/2000/svg','defs');" +
+            "    COLORS.forEach(function(color,i) {" +
+            "      var marker = document.createElementNS('http://www.w3.org/2000/svg','marker');" +
             "      marker.setAttribute('id','ch-arrow-'+i); marker.setAttribute('markerWidth','4'); marker.setAttribute('markerHeight','4');" +
             "      marker.setAttribute('refX','2.5'); marker.setAttribute('refY','2'); marker.setAttribute('orient','auto');" +
-            "      var poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');" +
+            "      var poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');" +
             "      poly.setAttribute('points','0 0, 4 2, 0 4'); poly.setAttribute('fill',color);" +
             "      marker.appendChild(poly); defs.appendChild(marker);" +
             "    });" +
             "    svgEl.appendChild(defs); parent.appendChild(svgEl); return svgEl;" +
             "  }" +
             "  function drawArrows(moves) {" +
-            "    var board = document.querySelector('cg-board, chess-board, wc-chess-board');" +
-            "    if(!board) return;" +
-            "    var svg=ensureSVG(board); if(!svg) return;" +
+            "    var board = document.querySelector('cg-board, wc-chess-board');" +
+            "    if (!board) return;" +
+            "    var svg = ensureSVG(board); if (!svg) return;" +
             "    clearArrows();" +
             "    var flipped = isFlipped();" +
             "    moves.forEach(function(move, i) {" +
-            "      if(!move||move.length<4) return;" +
-            "      var from=move.substring(0,2); var to=move.substring(2,4);" +
-            "      var fx=(flipped?7-(from.charCodeAt(0)-97):(from.charCodeAt(0)-97))+0.5;" +
-            "      var fy=(flipped?parseInt(from[1])-1:7-(parseInt(from[1])-1))+0.5;" +
-            "      var tx=(flipped?7-(to.charCodeAt(0)-97):(to.charCodeAt(0)-97))+0.5;" +
-            "      var ty=(flipped?parseInt(to[1])-1:7-(parseInt(to[1])-1))+0.5;" +
-            "      var dx=tx-fx; var dy=ty-fy; var len=Math.sqrt(dx*dx+dy*dy);" +
-            "      if(len<0.01) return;" +
-            "      var ux=dx/len; var uy=dy/len;" +
-            "      var line=document.createElementNS('http://www.w3.org/2000/svg','line');" +
+            "      if (!move || move.length < 4) return;" +
+            "      var from = move.substring(0,2); var to = move.substring(2,4);" +
+            "      var fx = (flipped ? 7-(from.charCodeAt(0)-97) : (from.charCodeAt(0)-97)) + 0.5;" +
+            "      var fy = (flipped ? parseInt(from[1])-1 : 7-(parseInt(from[1])-1)) + 0.5;" +
+            "      var tx = (flipped ? 7-(to.charCodeAt(0)-97) : (to.charCodeAt(0)-97)) + 0.5;" +
+            "      var ty = (flipped ? parseInt(to[1])-1 : 7-(parseInt(to[1])-1)) + 0.5;" +
+            "      var dx = tx-fx; var dy = ty-fy; var len = Math.sqrt(dx*dx+dy*dy);" +
+            "      if (len < 0.01) return;" +
+            "      var ux = dx/len; var uy = dy/len;" +
+            "      var line = document.createElementNS('http://www.w3.org/2000/svg','line');" +
             "      line.setAttribute('x1',fx); line.setAttribute('y1',fy);" +
             "      line.setAttribute('x2',tx-ux*0.38); line.setAttribute('y2',ty-uy*0.38);" +
-            "      line.setAttribute('stroke',COLORS[i]||'#22c55e'); line.setAttribute('stroke-width',i===0?'0.2':'0.14');" +
-            "      line.setAttribute('stroke-linecap','round'); line.setAttribute('marker-end','url(#ch-arrow-'+i+')');" +
-            "      line.setAttribute('opacity',i===0?'0.9':'0.65'); line.classList.add('ch-arrow');" +
+            "      line.setAttribute('stroke',COLORS[i]||'#22c55e');" +
+            "      line.setAttribute('stroke-width', i===0 ? '0.2' : '0.14');" +
+            "      line.setAttribute('stroke-linecap','round');" +
+            "      line.setAttribute('marker-end','url(#ch-arrow-'+i+')');" +
+            "      line.setAttribute('opacity', i===0 ? '0.9' : '0.65');" +
+            "      line.classList.add('ch-arrow');" +
             "      svg.appendChild(line);" +
             "    });" +
             "  }" +
-            "  function clearArrows() { if(svgEl) svgEl.querySelectorAll('.ch-arrow').forEach(function(el){el.remove();}); }" +
+            "  function clearArrows() { if (svgEl) svgEl.querySelectorAll('.ch-arrow').forEach(function(el){el.remove();}); }" +
             "})();";
 
         webView.evaluateJavascript(js, null);
-        if (isChessCom) {
-            // Следим за появлением chess-board через MutationObserver
-            webView.evaluateJavascript(
-                "(function() {" +
-                "  setTimeout(function() {" +
-                "    var wc = document.querySelector('wc-chess-board');" +
-                "    if (!wc || !wc.game) { ChessDebug.show('no game'); return; }" +
-                "    var g = wc.game;" +
-                "    var keys = Object.getOwnPropertyNames(g);" +
-                "    var fenKey = keys.find(function(k){return k.toLowerCase().indexOf('fen')>=0;});" +
-                "    var getFenKey = keys.find(function(k){return k.toLowerCase().indexOf('getfen')>=0||k.toLowerCase().indexOf('currentfen')>=0||k==='fen';});" +
-                "    ChessDebug.show('fenKey='+fenKey+' getFen='+getFenKey+' all='+keys.slice(0,15).join(','));" +
-                "  }, 4000);" +
-                "})();",
-                null
-            );
-        }
     }
 
     private String getLichessFen() {
         return
-            "  function isFlipped() { return document.querySelector('.cg-wrap')&&document.querySelector('.cg-wrap').classList.contains('orientation-black'); }" +
+            "  function isFlipped() { return document.querySelector('.cg-wrap') && document.querySelector('.cg-wrap').classList.contains('orientation-black'); }" +
             "  function getFen() {" +
-            "    ChessDebug.show(document.querySelector('chess-board')?'board OK: '+document.querySelector('chess-board').className:'no board on: '+window.location.href.substring(0,50));" +
             "    var board = document.querySelector('cg-board');" +
             "    if (!board) return null;" +
             "    var pieces = board.querySelectorAll('piece');" +
@@ -259,38 +275,38 @@ public class MainActivity extends AppCompatActivity {
             "    var flipped = isFlipped();" +
             "    var bw = board.clientWidth || 480;" +
             "    var grid = [];" +
-            "    for(var i=0;i<8;i++){grid.push([null,null,null,null,null,null,null,null]);}" +
+            "    for (var i=0; i<8; i++) { grid.push([null,null,null,null,null,null,null,null]); }" +
             "    pieces.forEach(function(p) {" +
             "      var cls = Array.from(p.classList);" +
             "      var color = cls.find(function(c){return c==='white'||c==='black';});" +
             "      var type = cls.find(function(c){return ['king','queen','rook','bishop','knight','pawn'].indexOf(c)>=0;});" +
-            "      if (!color||!type) return;" +
-            "      var style = p.getAttribute('style')||'';" +
-            "      var col=-1,row=-1;" +
+            "      if (!color || !type) return;" +
+            "      var style = p.getAttribute('style') || '';" +
+            "      var col=-1, row=-1;" +
             "      var pct = style.match(/translate\\(\\s*(\\d+(?:\\.\\d+)?)%\\s*,\\s*(\\d+(?:\\.\\d+)?)%\\s*\\)/);" +
             "      if (pct) { col=Math.round(parseFloat(pct[1])/12.5); row=Math.round(parseFloat(pct[2])/12.5); }" +
             "      else { var px=style.match(/translate\\(\\s*(\\d+(?:\\.\\d+)?)px\\s*,\\s*(\\d+(?:\\.\\d+)?)px\\s*\\)/); if(px){col=Math.round(parseFloat(px[1])/bw*8);row=Math.round(parseFloat(px[2])/bw*8);} }" +
-            "      if(col<0||col>7||row<0||row>7) return;" +
-            "      var gc=flipped?7-col:col; var gr=flipped?7-row:row;" +
-            "      var m={king:'k',queen:'q',rook:'r',bishop:'b',knight:'n',pawn:'p'};" +
-            "      var ch=m[type]; if(!ch) return;" +
-            "      grid[gr][gc]=color==='white'?ch.toUpperCase():ch;" +
+            "      if (col<0||col>7||row<0||row>7) return;" +
+            "      var gc = flipped ? 7-col : col; var gr = flipped ? 7-row : row;" +
+            "      var m = {king:'k',queen:'q',rook:'r',bishop:'b',knight:'n',pawn:'p'};" +
+            "      var ch = m[type]; if (!ch) return;" +
+            "      grid[gr][gc] = color==='white' ? ch.toUpperCase() : ch;" +
             "    });" +
-            "    var fen=''; for(var r=0;r<8;r++){var e=0;for(var c=0;c<8;c++){if(grid[r][c]){if(e){fen+=e;e=0;}fen+=grid[r][c];}else e++;}if(e)fen+=e;if(r<7)fen+='/';}" +
-            "    var all=document.querySelectorAll('u8t,kwdb,m2');var idx=-1;all.forEach(function(m,i){if(m.classList.contains('a1t'))idx=i;});" +
-            "    var turn=idx>=0?(idx%2===0?'b':'w'):'w';" +
-            "    return fen+' '+turn+' - - 0 1';" +
+            "    var fen='';" +
+            "    for (var r=0;r<8;r++){var e=0;for(var c=0;c<8;c++){if(grid[r][c]){if(e){fen+=e;e=0;}fen+=grid[r][c];}else e++;}if(e)fen+=e;if(r<7)fen+='/';}" +
+            "    var all=document.querySelectorAll('u8t,kwdb,m2'); var idx=-1;" +
+            "    all.forEach(function(m,i){if(m.classList.contains('a1t'))idx=i;});" +
+            "    var turn = idx>=0 ? (idx%2===0?'b':'w') : 'w';" +
+            "    return fen + ' ' + turn + ' - - 0 1';" +
             "  }";
     }
 
     private String getChessComFen() {
         return
             "  function isFlipped() {" +
-            "    try {" +
-            "      var board = document.querySelector('wc-chess-board');" +
-            "      if (board && board.game) return board.game.getIsFlipped ? board.game.getIsFlipped() : false;" +
-            "    } catch(e) {}" +
-            "    return false;" +
+            "    var board = document.querySelector('wc-chess-board');" +
+            "    if (!board) return false;" +
+            "    return board.getAttribute('flipped') !== null || board.classList.contains('flipped');" +
             "  }" +
             "  function getFen() {" +
             "    try {" +
@@ -299,17 +315,6 @@ public class MainActivity extends AppCompatActivity {
             "      return wc.game.getFEN();" +
             "    } catch(e) { return null; }" +
             "  }";
-    }
-
-    class ChessDebugInterface {
-        @android.webkit.JavascriptInterface
-        public void show(final String msg) {
-            runOnUiThread(() -> Toast.makeText(MainActivity.this, msg, Toast.LENGTH_LONG).show());
-        }
-        @android.webkit.JavascriptInterface
-        public void log(final String msg) {
-            android.util.Log.d("ChessHelper", msg);
-        }
     }
 
     @Override
