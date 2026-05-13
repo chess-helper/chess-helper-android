@@ -240,10 +240,14 @@ public class MainActivity extends AppCompatActivity {
                 "      var sr = board.shadowRoot;" +
                 "      var pieces = sr ? sr.querySelectorAll('[class*=piece]') : board.querySelectorAll('[class*=piece]');" +
                 "    var fenStr = '';" +
-                "    try { var wc = document.querySelector('wc-chess-board'); var keys = Object.getOwnPropertyNames(wc); for(var k of keys){var v=wc[k];if(v&&typeof v==='object'&&v.fen){fenStr=v.fen();break;}if(v&&typeof v==='string'&&v.length>20&&v.indexOf(' w ')>0){fenStr=v;break;}} } catch(ex) {}" +
-                "    ChessDebug.show('fen=' + (fenStr?fenStr.substring(0,40):'not found'));" +
-                "    }" +
-                "  });" +
+                "    try {" +
+                "      var wc = document.querySelector('wc-chess-board');" +
+                "      if (wc) {" +
+                "        var proto = Object.getPrototypeOf(wc);" +
+                "        var allKeys = Object.getOwnPropertyNames(proto).concat(Object.getOwnPropertyNames(wc));" +
+                "        for(var k of allKeys){try{var v=wc[k];if(v&&typeof v==='object'&&v.fen&&typeof v.fen==='function'){fenStr=v.fen();break;}}catch(e){}}" +
+                "      }" +
+                "    } catch(ex) {}" +
                 "  window.__chessObserver.observe(document.body, {childList:true, subtree:true});" +
                 "  setTimeout(function() { var all = Array.from(document.querySelectorAll('*')).filter(function(e){return e.tagName.toLowerCase().indexOf('chess')>=0||e.tagName.toLowerCase().indexOf('board')>=0;}).map(function(e){return e.tagName;}).join(','); ChessDebug.show('Chess tags: ' + (all||'none')); }, 3000);" +
                 "  var wcb = document.querySelector('wc-chess-board');" +
