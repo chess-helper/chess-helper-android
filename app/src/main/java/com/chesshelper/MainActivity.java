@@ -38,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
 
+        webView.addJavascriptInterface(new ChessDebugInterface(), "ChessDebug");
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
@@ -223,7 +224,7 @@ public class MainActivity extends AppCompatActivity {
         return
             "  function isFlipped() { return document.querySelector('.cg-wrap')&&document.querySelector('.cg-wrap').classList.contains('orientation-black'); }" +
             "  function getFen() {" +
-            "    console.log('ChessHelper: looking for board', document.querySelector('chess-board') ? 'found' : 'not found');" +
+            "    if (!window.__debugShown) { window.__debugShown=true; ChessDebug.show(document.querySelector('chess-board')?'board OK':'no board. tags:'+Array.from(document.querySelectorAll('*')).slice(0,20).map(function(e){return e.tagName;}).join(',')); }" +
             "    var board = document.querySelector('cg-board');" +
             "    if (!board) return null;" +
             "    var pieces = board.querySelectorAll('piece');" +
@@ -301,6 +302,17 @@ public class MainActivity extends AppCompatActivity {
             "      return fen + ' w - - 0 1';" +
             "    } catch(e) { return null; }" +
             "  }";
+    }
+
+    class ChessDebugInterface {
+        @android.webkit.JavascriptInterface
+        public void show(final String msg) {
+            runOnUiThread(() -> Toast.makeText(MainActivity.this, msg, Toast.LENGTH_LONG).show());
+        }
+        @android.webkit.JavascriptInterface
+        public void log(final String msg) {
+            android.util.Log.d("ChessHelper", msg);
+        }
     }
 
     @Override
