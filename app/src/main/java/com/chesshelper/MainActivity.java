@@ -237,7 +237,9 @@ public class MainActivity extends AppCompatActivity {
                 "    var board = document.querySelector('chess-board');" +
                 "    if (board && !window.__boardFound) {" +
                 "      window.__boardFound = true;" +
-                "      ChessDebug.show('BOARD FOUND! class=' + board.className);" +
+                "      var sr = board.shadowRoot;" +
+                "      var pieces = sr ? sr.querySelectorAll('[class*=piece]') : board.querySelectorAll('[class*=piece]');" +
+                "      ChessDebug.show('FOUND! pieces=' + pieces.length + ' sr=' + (sr?'yes':'no') + ' cls=' + board.className);" +
                 "    }" +
                 "  });" +
                 "  window.__chessObserver.observe(document.body, {childList:true, subtree:true});" +
