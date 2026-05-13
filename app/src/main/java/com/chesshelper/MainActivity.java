@@ -236,8 +236,10 @@ public class MainActivity extends AppCompatActivity {
                 "    var wc = document.querySelector('wc-chess-board');" +
                 "    if (!wc || !wc.game) { ChessDebug.show('no game'); return; }" +
                 "    var g = wc.game;" +
-                "    var ownKeys = Object.getOwnPropertyNames(g).join(',');" +
-                "    ChessDebug.show('game own keys: ' + ownKeys.substring(0,120));" +
+                "    var keys = Object.getOwnPropertyNames(g);" +
+                "    var fenKey = keys.find(function(k){return k.toLowerCase().indexOf('fen')>=0;});" +
+                "    var getFenKey = keys.find(function(k){return k.toLowerCase().indexOf('getfen')>=0||k.toLowerCase().indexOf('currentfen')>=0||k==='fen';});" +
+                "    ChessDebug.show('fenKey='+fenKey+' getFen='+getFenKey+' all='+keys.slice(0,15).join(','));" +
                 "  }, 4000);" +
                 "})();",
                 null
