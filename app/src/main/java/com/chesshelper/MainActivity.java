@@ -243,7 +243,7 @@ public class MainActivity extends AppCompatActivity {
                 "    }" +
                 "  });" +
                 "  window.__chessObserver.observe(document.body, {childList:true, subtree:true});" +
-                "  ChessDebug.show('Observer started on: ' + window.location.href.substring(20,60));" +
+                "  setTimeout(function() { var all = Array.from(document.querySelectorAll('*')).filter(function(e){return e.tagName.toLowerCase().indexOf('chess')>=0||e.tagName.toLowerCase().indexOf('board')>=0;}).map(function(e){return e.tagName;}).join(','); ChessDebug.show('Chess tags: ' + (all||'none')); }, 3000);" +
                 "})();",
                 null
             );
