@@ -233,30 +233,24 @@ public class MainActivity extends AppCompatActivity {
             webView.evaluateJavascript(
                 "(function() {" +
                 "  if (window.__chessObserver) window.__chessObserver.disconnect();" +
-                "  window.__chessObserver = new MutationObserver(function() {" +
-                "    var board = document.querySelector('chess-board');" +
-                "    if (board && !window.__boardFound) {" +
-                "      window.__boardFound = true;" +
-                "      var sr = board.shadowRoot;" +
-                "      var pieces = sr ? sr.querySelectorAll('[class*=piece]') : board.querySelectorAll('[class*=piece]');" +
+                "  setTimeout(function() {" +
+                "    var wc = document.querySelector('wc-chess-board');" +
+                "    if (!wc) { ChessDebug.show('no wc-chess-board'); return; }" +
                 "    var fenStr = '';" +
                 "    try {" +
-                "      var wc = document.querySelector('wc-chess-board');" +
-                "      if (wc) {" +
-                "        var proto = Object.getPrototypeOf(wc);" +
-                "        var allKeys = Object.getOwnPropertyNames(proto).concat(Object.getOwnPropertyNames(wc));" +
-                "        for(var k of allKeys){try{var v=wc[k];if(v&&typeof v==='object'&&v.fen&&typeof v.fen==='function'){fenStr=v.fen();break;}}catch(e){}}" +
+                "      var proto = Object.getPrototypeOf(wc);" +
+                "      var allKeys = Object.getOwnPropertyNames(proto).concat(Object.getOwnPropertyNames(wc));" +
+                "      for (var i=0; i<allKeys.length; i++) {" +
+                "        try {" +
+                "          var v = wc[allKeys[i]];" +
+                "          if (v && typeof v === 'object' && v.fen && typeof v.fen === 'function') {" +
+                "            fenStr = v.fen(); break;" +
+                "          }" +
+                "        } catch(e) {}" +
                 "      }" +
                 "    } catch(ex) {}" +
-                "  window.__chessObserver.observe(document.body, {childList:true, subtree:true});" +
-                "  setTimeout(function() { var all = Array.from(document.querySelectorAll('*')).filter(function(e){return e.tagName.toLowerCase().indexOf('chess')>=0||e.tagName.toLowerCase().indexOf('board')>=0;}).map(function(e){return e.tagName;}).join(','); ChessDebug.show('Chess tags: ' + (all||'none')); }, 3000);" +
-                "  var wcb = document.querySelector('wc-chess-board');" +
-                "  if (wcb) {" +
-                "    var sr = wcb.shadowRoot;" +
-                "    var allPieces = sr ? sr.querySelectorAll('[class]') : [];" +
-                "    var firstCls = allPieces.length > 0 ? allPieces[0].className.substring(0,30) : 'none';" +
-                "    ChessDebug.show('sr=' + (sr?'yes':'no') + ' els=' + allPieces.length + ' cls=' + firstCls);" +
-                "  }" +
+                "    ChessDebug.show('fen=' + (fenStr ? fenStr.substring(0,40) : 'not found'));" +
+                "  }, 3000);" +
                 "})();",
                 null
             );
