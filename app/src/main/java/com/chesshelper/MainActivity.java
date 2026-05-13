@@ -40,10 +40,20 @@ public class MainActivity extends AppCompatActivity {
 
         webView.addJavascriptInterface(new ChessDebugInterface(), "ChessDebug");
         webView.setWebViewClient(new WebViewClient() {
+            private String lastUrl = "";
             @Override
             public void onPageFinished(WebView view, String url) {
                 if (url.contains("lichess.org") || url.contains("chess.com")) {
                     injectChessHelper();
+                }
+            }
+            @Override
+            public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
+                if (!url.equals(lastUrl) && url.contains("chess.com")) {
+                    lastUrl = url;
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                        injectChessHelper();
+                    }, 2000);
                 }
             }
         });
