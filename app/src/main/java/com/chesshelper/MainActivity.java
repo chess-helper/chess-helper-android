@@ -233,36 +233,10 @@ public class MainActivity extends AppCompatActivity {
             webView.evaluateJavascript(
                 "(function() {" +
                 "  setTimeout(function() {" +
-                "    var result = 'checking...';" +
-                "    try {" +
-                "      var wc = document.querySelector('wc-chess-board');" +
-                "      if (!wc) { ChessDebug.show('no board'); return; }" +
-                "      var found = [];" +
-                "      var checkObj = function(obj, depth, path) {" +
-                "        if (depth > 3 || !obj || typeof obj !== 'object') return;" +
-                "        try {" +
-                "          var keys = Object.keys(obj);" +
-                "          for (var i=0; i<Math.min(keys.length,20); i++) {" +
-                "            var k = keys[i];" +
-                "            try {" +
-                "              var v = obj[k];" +
-                "              if (typeof v === 'string' && v.length > 10 && v.indexOf('/') > 0 && (v.indexOf(' w ') > 0 || v.indexOf(' b ') > 0)) {" +
-                "                found.push(path+'.'+k+'='+v.substring(0,30));" +
-                "              }" +
-                "              if (typeof v === 'function' && k === 'fen') {" +
-                "                found.push('FN:'+path+'.fen()='+v.call(obj).substring(0,30));" +
-                "              }" +
-                "            } catch(e) {}" +
-                "          }" +
-                "        } catch(e) {}" +
-                "      };" +
-                "      checkObj(wc, 0, 'wc');" +
-                "      var wcKeys = Object.keys(wc);" +
-                "      for (var i=0; i<Math.min(wcKeys.length,10); i++) {" +
-                "        try { checkObj(wc[wcKeys[i]], 1, 'wc.'+wcKeys[i]); } catch(e) {}" +
-                "      }" +
-                "      ChessDebug.show(found.length > 0 ? found[0] : 'keys:'+Object.keys(wc).slice(0,10).join(','));" +
-                "    } catch(ex) { ChessDebug.show('err:'+ex.message); }" +
+                "    var wc = document.querySelector('wc-chess-board');" +
+                "    if (!wc || !wc.state) { ChessDebug.show('no state'); return; }" +
+                "    var keys = Object.keys(wc.state).join(',');" +
+                "    ChessDebug.show('state keys: ' + keys.substring(0,100));" +
                 "  }, 4000);" +
                 "})();",
                 null
