@@ -224,7 +224,7 @@ public class MainActivity extends AppCompatActivity {
         return
             "  function isFlipped() { return document.querySelector('.cg-wrap')&&document.querySelector('.cg-wrap').classList.contains('orientation-black'); }" +
             "  function getFen() {" +
-            "    if (!window.__debugShown) { window.__debugShown=true; ChessDebug.show(document.querySelector('chess-board')?'board OK':'no board. tags:'+Array.from(document.querySelectorAll('*')).slice(0,20).map(function(e){return e.tagName;}).join(',')); }" +
+            "    ChessDebug.show(document.querySelector('chess-board')?'board OK: '+document.querySelector('chess-board').className:'no board on: '+window.location.href.substring(0,50));" +
             "    var board = document.querySelector('cg-board');" +
             "    if (!board) return null;" +
             "    var pieces = board.querySelectorAll('piece');" +
