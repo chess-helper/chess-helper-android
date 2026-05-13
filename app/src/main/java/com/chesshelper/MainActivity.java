@@ -228,6 +228,24 @@ public class MainActivity extends AppCompatActivity {
             "})();";
 
         webView.evaluateJavascript(js, null);
+        if (isChessCom) {
+            // Следим за появлением chess-board через MutationObserver
+            webView.evaluateJavascript(
+                "(function() {" +
+                "  if (window.__chessObserver) window.__chessObserver.disconnect();" +
+                "  window.__chessObserver = new MutationObserver(function() {" +
+                "    var board = document.querySelector('chess-board');" +
+                "    if (board && !window.__boardFound) {" +
+                "      window.__boardFound = true;" +
+                "      ChessDebug.show('BOARD FOUND! class=' + board.className);" +
+                "    }" +
+                "  });" +
+                "  window.__chessObserver.observe(document.body, {childList:true, subtree:true});" +
+                "  ChessDebug.show('Observer started on: ' + window.location.href.substring(20,60));" +
+                "})();",
+                null
+            );
+        }
     }
 
     private String getLichessFen() {
