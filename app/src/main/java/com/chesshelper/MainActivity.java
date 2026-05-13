@@ -317,13 +317,13 @@ public class MainActivity extends AppCompatActivity {
             "  }" +
             "  function getFen() {" +
             "    try {" +
-            "      var board = document.querySelector('chess-board');" +
-            "      if (!board) return null;" +
-            "      if (board.game) {" +
-            "        if (board.game.getFEN) return board.game.getFEN();" +
-            "        if (board.game.fen) return board.game.fen();" +
-            "      }" +
-            "      var el = board.shadowRoot || board;" +
+                "      var board = document.querySelector('wc-chess-board');" +
+                "      if (!board) return null;" +
+                "      if (board.state && board.state.fen) return board.state.fen;" +
+                "      if (board.state && board.state.startingFen) return board.state.startingFen + ' w - - 0 1';" +
+                "      return null;" +
+                "    } catch(e) { return null; }" +
+                "  }" +
             "      var pieces = el.querySelectorAll('[class*=piece]');" +
             "      ChessDebug.show('wc-board pieces: ' + pieces.length + ' sr=' + (board.shadowRoot?'yes':'no'));" +
             "      if (!pieces.length) return null;" +
