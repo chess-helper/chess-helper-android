@@ -232,25 +232,38 @@ public class MainActivity extends AppCompatActivity {
             // Следим за появлением chess-board через MutationObserver
             webView.evaluateJavascript(
                 "(function() {" +
-                "  if (window.__chessObserver) window.__chessObserver.disconnect();" +
                 "  setTimeout(function() {" +
-                "    var wc = document.querySelector('wc-chess-board');" +
-                "    if (!wc) { ChessDebug.show('no wc-chess-board'); return; }" +
-                "    var fenStr = '';" +
+                "    var result = 'checking...';" +
                 "    try {" +
-                "      var proto = Object.getPrototypeOf(wc);" +
-                "      var allKeys = Object.getOwnPropertyNames(proto).concat(Object.getOwnPropertyNames(wc));" +
-                "      for (var i=0; i<allKeys.length; i++) {" +
+                "      var wc = document.querySelector('wc-chess-board');" +
+                "      if (!wc) { ChessDebug.show('no board'); return; }" +
+                "      var found = [];" +
+                "      var checkObj = function(obj, depth, path) {" +
+                "        if (depth > 3 || !obj || typeof obj !== 'object') return;" +
                 "        try {" +
-                "          var v = wc[allKeys[i]];" +
-                "          if (v && typeof v === 'object' && v.fen && typeof v.fen === 'function') {" +
-                "            fenStr = v.fen(); break;" +
+                "          var keys = Object.keys(obj);" +
+                "          for (var i=0; i<Math.min(keys.length,20); i++) {" +
+                "            var k = keys[i];" +
+                "            try {" +
+                "              var v = obj[k];" +
+                "              if (typeof v === 'string' && v.length > 10 && v.indexOf('/') > 0 && (v.indexOf(' w ') > 0 || v.indexOf(' b ') > 0)) {" +
+                "                found.push(path+'.'+k+'='+v.substring(0,30));" +
+                "              }" +
+                "              if (typeof v === 'function' && k === 'fen') {" +
+                "                found.push('FN:'+path+'.fen()='+v.call(obj).substring(0,30));" +
+                "              }" +
+                "            } catch(e) {}" +
                 "          }" +
                 "        } catch(e) {}" +
+                "      };" +
+                "      checkObj(wc, 0, 'wc');" +
+                "      var wcKeys = Object.keys(wc);" +
+                "      for (var i=0; i<Math.min(wcKeys.length,10); i++) {" +
+                "        try { checkObj(wc[wcKeys[i]], 1, 'wc.'+wcKeys[i]); } catch(e) {}" +
                 "      }" +
-                "    } catch(ex) {}" +
-                "    ChessDebug.show('fen=' + (fenStr ? fenStr.substring(0,40) : 'not found'));" +
-                "  }, 3000);" +
+                "      ChessDebug.show(found.length > 0 ? found[0] : 'keys:'+Object.keys(wc).slice(0,10).join(','));" +
+                "    } catch(ex) { ChessDebug.show('err:'+ex.message); }" +
+                "  }, 4000);" +
                 "})();",
                 null
             );
