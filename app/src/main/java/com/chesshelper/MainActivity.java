@@ -300,8 +300,6 @@ public class MainActivity extends AppCompatActivity {
             "    } catch(e) { return null; }" +
             "  }";
     }
-            "  }";
-    }
 
     class ChessDebugInterface {
         @android.webkit.JavascriptInterface
