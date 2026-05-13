@@ -294,11 +294,11 @@ public class MainActivity extends AppCompatActivity {
             "  }" +
             "  function getFen() {" +
             "    try {" +
-                "      var board = document.querySelector('wc-chess-board');" +
-                "      if (!board) return null;" +
-                "      if (board.state && board.state.fen) return board.state.fen;" +
-                "      if (board.state && board.state.startingFen) return board.state.startingFen + ' w - - 0 1';" +
-                "      return null;" +
+            "      var wc = document.querySelector('wc-chess-board');" +
+            "      if (!wc || !wc.game) return null;" +
+            "      return wc.game.getFEN();" +
+            "    } catch(e) { return null; }" +
+            "  }" +
                 "    } catch(e) { return null; }" +
                 "  }" +
             "      var pieces = el.querySelectorAll('[class*=piece]');" +
