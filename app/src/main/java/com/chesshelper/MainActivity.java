@@ -290,7 +290,7 @@ public class MainActivity extends AppCompatActivity {
         return
             "  function isFlipped() {" +
             "    try {" +
-            "      var board = document.querySelector('chess-board');" +
+            "      var board = document.querySelector('wc-chess-board');" +
             "      if (board && board.game) return board.game.getIsFlipped ? board.game.getIsFlipped() : false;" +
             "    } catch(e) {}" +
             "    return false;" +
@@ -305,6 +305,7 @@ public class MainActivity extends AppCompatActivity {
             "      }" +
             "      var el = board.shadowRoot || board;" +
             "      var pieces = el.querySelectorAll('[class*=piece]');" +
+            "      ChessDebug.show('wc-board pieces: ' + pieces.length + ' sr=' + (board.shadowRoot?'yes':'no'));" +
             "      if (!pieces.length) return null;" +
             "      var grid = [];" +
             "      for(var i=0;i<8;i++){grid.push([null,null,null,null,null,null,null,null]);}" +
