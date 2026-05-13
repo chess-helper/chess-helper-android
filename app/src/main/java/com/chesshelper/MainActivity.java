@@ -244,6 +244,13 @@ public class MainActivity extends AppCompatActivity {
                 "  });" +
                 "  window.__chessObserver.observe(document.body, {childList:true, subtree:true});" +
                 "  setTimeout(function() { var all = Array.from(document.querySelectorAll('*')).filter(function(e){return e.tagName.toLowerCase().indexOf('chess')>=0||e.tagName.toLowerCase().indexOf('board')>=0;}).map(function(e){return e.tagName;}).join(','); ChessDebug.show('Chess tags: ' + (all||'none')); }, 3000);" +
+                "  var wcb = document.querySelector('wc-chess-board');" +
+                "  if (wcb) {" +
+                "    var sr = wcb.shadowRoot;" +
+                "    var allPieces = sr ? sr.querySelectorAll('[class]') : [];" +
+                "    var firstCls = allPieces.length > 0 ? allPieces[0].className.substring(0,30) : 'none';" +
+                "    ChessDebug.show('sr=' + (sr?'yes':'no') + ' els=' + allPieces.length + ' cls=' + firstCls);" +
+                "  }" +
                 "})();",
                 null
             );
