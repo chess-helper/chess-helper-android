@@ -4,20 +4,24 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.webkit.*;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.webkit.*;
 import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private int lines = 1;
     private int depth = 12;
     private boolean isChessCom = false;
+    private boolean enabled = true;
     private SharedPreferences prefs;
+    private Button toggleBtn;
+    private EditText urlBar;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -28,6 +32,8 @@ public class MainActivity extends AppCompatActivity {
         prefs = getSharedPreferences("chess_helper", MODE_PRIVATE);
         lines = prefs.getInt("lines", 1);
         depth = prefs.getInt("depth", 12);
+        enabled = prefs.getBoolean("enabled", true);
+        isChessCom = prefs.getBoolean("isChessCom", false);
 
         webView = findViewById(R.id.webView);
         WebSettings settings = webView.getSettings();
@@ -38,43 +44,82 @@ public class MainActivity extends AppCompatActivity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
 
+        urlBar = findViewById(R.id.urlBar);
+        urlBar.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_GO) {
+                String url = urlBar.getText().toString().trim();
+                if (!url.startsWith("http")) url = "https://" + url;
+                webView.loadUrl(url);
+                return true;
+            }
+            return false;
+        });
+
         webView.setWebViewClient(new WebViewClient() {
             private String lastUrl = "";
             @Override
             public void onPageFinished(WebView view, String url) {
+                urlBar.setText(url);
+                isChessCom = url.contains("chess.com");
                 if (url.contains("lichess.org") || url.contains("chess.com")) {
-                    injectChessHelper();
+                    if (enabled) injectChessHelper();
                 }
+                updateSwitchBtn();
             }
             @Override
             public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
                 if (!url.equals(lastUrl) && url.contains("chess.com")) {
                     lastUrl = url;
                     new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                        injectChessHelper();
+                        if (enabled) injectChessHelper();
                     }, 2000);
                 }
             }
         });
 
         webView.setWebChromeClient(new WebChromeClient());
-        webView.loadUrl("https://lichess.org");
 
-        findViewById(R.id.settingsBtn).setOnClickListener(v -> showSettings());
+        toggleBtn = findViewById(R.id.toggleBtn);
+        updateToggleBtn();
+        toggleBtn.setOnClickListener(v -> {
+            enabled = !enabled;
+            prefs.edit().putBoolean("enabled", enabled).apply();
+            updateToggleBtn();
+            if (enabled) {
+                injectChessHelper();
+            } else {
+                webView.evaluateJavascript("if(window.__sfWorker){window.__sfWorker.terminate();window.__sfWorker=null;} document.querySelectorAll('#ch-svg,#ch-score').forEach(function(e){e.remove();});", null);
+            }
+        });
 
         Button switchBtn = findViewById(R.id.switchSiteBtn);
         switchBtn.setOnClickListener(v -> {
             isChessCom = !isChessCom;
-            if (isChessCom) {
-                switchBtn.setText("lichess.org");
-                switchBtn.setTextColor(0xFF22C55E);
-                webView.loadUrl("https://chess.com");
-            } else {
-                switchBtn.setText("chess.com");
-                switchBtn.setTextColor(0xFF3B82F6);
-                webView.loadUrl("https://lichess.org");
-            }
+            prefs.edit().putBoolean("isChessCom", isChessCom).apply();
+            updateSwitchBtn();
+            webView.loadUrl(isChessCom ? "https://chess.com" : "https://lichess.org");
         });
+
+        findViewById(R.id.settingsBtn).setOnClickListener(v -> showSettings());
+
+        webView.loadUrl(isChessCom ? "https://chess.com" : "https://lichess.org");
+    }
+
+    private void updateToggleBtn() {
+        toggleBtn.setText(enabled ? "✓" : "✗");
+        toggleBtn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+            enabled ? 0xFF22C55E : 0xFF666666));
+    }
+
+    private void updateSwitchBtn() {
+        Button switchBtn = findViewById(R.id.switchSiteBtn);
+        if (isChessCom) {
+            switchBtn.setText("lichess.org");
+            switchBtn.setTextColor(0xFF22C55E);
+        } else {
+            switchBtn.setText("chess.com");
+            switchBtn.setTextColor(0xFF3B82F6);
+        }
     }
 
     private void showSettings() {
@@ -106,8 +151,8 @@ public class MainActivity extends AppCompatActivity {
                 else if (checkedId == R.id.lines2) lines = 2;
                 else lines = 3;
                 prefs.edit().putInt("lines", lines).putInt("depth", depth).apply();
-                injectChessHelper();
-                Toast.makeText(this, "Настройки сохранены!", Toast.LENGTH_SHORT).show();
+                if (enabled) injectChessHelper();
+                Toast.makeText(this, "Сохранено!", Toast.LENGTH_SHORT).show();
             })
             .setNegativeButton("Отмена", null)
             .show();
@@ -168,16 +213,14 @@ public class MainActivity extends AppCompatActivity {
             "      if (bm && bm !== '(none)' && !collectedMoves[0]) collectedMoves[0] = bm;" +
             "      drawArrows(collectedMoves.slice(0, LINES));" +
             "      renderScore(collectedScore);" +
-            "      collectedMoves = [];" +
-            "      collectedScore = null;" +
+            "      collectedMoves = []; collectedScore = null;" +
             "    }" +
             "  };" +
             "  sf.postMessage('uci');" +
             "  function checkPos() {" +
             "    var fen = getFen();" +
             "    if (!fen || fen === lastFen) return;" +
-            "    lastFen = fen;" +
-            "    clearArrows();" +
+            "    lastFen = fen; clearArrows();" +
             "    sf.postMessage('stop');" +
             "    sf.postMessage('position fen ' + fen);" +
             "    sf.postMessage('go depth ' + DEPTH);" +
@@ -186,10 +229,10 @@ public class MainActivity extends AppCompatActivity {
             "  function renderScore(score) {" +
             "    var board = document.querySelector('cg-board, wc-chess-board');" +
             "    if (!board) return;" +
-            "    var parent = board.parentElement;" +
-            "    if (!parent) return;" +
+            "    var parent = board.parentElement; if (!parent) return;" +
             "    if (!scoreEl || !parent.contains(scoreEl)) {" +
             "      scoreEl = document.createElement('div');" +
+            "      scoreEl.id = 'ch-score';" +
             "      scoreEl.style.cssText = 'position:absolute;top:4px;left:4px;z-index:200;background:rgba(0,0,0,0.75);color:#fff;font-family:monospace;font-size:13px;font-weight:bold;padding:3px 7px;border-radius:5px;pointer-events:none;';" +
             "      if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative';" +
             "      parent.appendChild(scoreEl);" +
@@ -202,13 +245,11 @@ public class MainActivity extends AppCompatActivity {
             "      text = v > 0 ? 'M+' + v : 'M' + v;" +
             "      color = v > 0 ? '#22c55e' : '#ef4444';" +
             "    } else {" +
-            "      var p = (score.value / 100).toFixed(1);" +
-            "      var v = parseFloat(p);" +
+            "      var p = (score.value / 100).toFixed(1); var v = parseFloat(p);" +
             "      text = v > 0 ? '+' + p : '' + p;" +
             "      color = v > 0.3 ? '#22c55e' : v < -0.3 ? '#ef4444' : '#facc15';" +
             "    }" +
-            "    scoreEl.textContent = text;" +
-            "    scoreEl.style.color = color;" +
+            "    scoreEl.textContent = text; scoreEl.style.color = color;" +
             "    scoreEl.style.borderLeft = '3px solid ' + color;" +
             "  }" +
             "  function ensureSVG(boardEl) {" +
@@ -216,6 +257,7 @@ public class MainActivity extends AppCompatActivity {
             "    if (!parent.style.position || parent.style.position === 'static') parent.style.position = 'relative';" +
             "    if (svgEl && parent.contains(svgEl)) return svgEl;" +
             "    svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');" +
+            "    svgEl.id = 'ch-svg';" +
             "    svgEl.setAttribute('viewBox','0 0 8 8');" +
             "    svgEl.setAttribute('preserveAspectRatio','xMidYMid meet');" +
             "    svgEl.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100;';" +
@@ -272,32 +314,28 @@ public class MainActivity extends AppCompatActivity {
             "    if (!board) return null;" +
             "    var pieces = board.querySelectorAll('piece');" +
             "    if (!pieces.length) return null;" +
-            "    var flipped = isFlipped();" +
-            "    var bw = board.clientWidth || 480;" +
-            "    var grid = [];" +
-            "    for (var i=0; i<8; i++) { grid.push([null,null,null,null,null,null,null,null]); }" +
+            "    var flipped = isFlipped(); var bw = board.clientWidth || 480;" +
+            "    var grid = []; for (var i=0;i<8;i++){grid.push([null,null,null,null,null,null,null,null]);}" +
             "    pieces.forEach(function(p) {" +
             "      var cls = Array.from(p.classList);" +
             "      var color = cls.find(function(c){return c==='white'||c==='black';});" +
             "      var type = cls.find(function(c){return ['king','queen','rook','bishop','knight','pawn'].indexOf(c)>=0;});" +
-            "      if (!color || !type) return;" +
-            "      var style = p.getAttribute('style') || '';" +
-            "      var col=-1, row=-1;" +
+            "      if (!color||!type) return;" +
+            "      var style = p.getAttribute('style')||''; var col=-1,row=-1;" +
             "      var pct = style.match(/translate\\(\\s*(\\d+(?:\\.\\d+)?)%\\s*,\\s*(\\d+(?:\\.\\d+)?)%\\s*\\)/);" +
-            "      if (pct) { col=Math.round(parseFloat(pct[1])/12.5); row=Math.round(parseFloat(pct[2])/12.5); }" +
-            "      else { var px=style.match(/translate\\(\\s*(\\d+(?:\\.\\d+)?)px\\s*,\\s*(\\d+(?:\\.\\d+)?)px\\s*\\)/); if(px){col=Math.round(parseFloat(px[1])/bw*8);row=Math.round(parseFloat(px[2])/bw*8);} }" +
-            "      if (col<0||col>7||row<0||row>7) return;" +
-            "      var gc = flipped ? 7-col : col; var gr = flipped ? 7-row : row;" +
-            "      var m = {king:'k',queen:'q',rook:'r',bishop:'b',knight:'n',pawn:'p'};" +
-            "      var ch = m[type]; if (!ch) return;" +
-            "      grid[gr][gc] = color==='white' ? ch.toUpperCase() : ch;" +
+            "      if (pct){col=Math.round(parseFloat(pct[1])/12.5);row=Math.round(parseFloat(pct[2])/12.5);}" +
+            "      else{var px=style.match(/translate\\(\\s*(\\d+(?:\\.\\d+)?)px\\s*,\\s*(\\d+(?:\\.\\d+)?)px\\s*\\)/);if(px){col=Math.round(parseFloat(px[1])/bw*8);row=Math.round(parseFloat(px[2])/bw*8);}}" +
+            "      if(col<0||col>7||row<0||row>7) return;" +
+            "      var gc=flipped?7-col:col; var gr=flipped?7-row:row;" +
+            "      var m={king:'k',queen:'q',rook:'r',bishop:'b',knight:'n',pawn:'p'};" +
+            "      var ch=m[type]; if(!ch) return;" +
+            "      grid[gr][gc]=color==='white'?ch.toUpperCase():ch;" +
             "    });" +
-            "    var fen='';" +
-            "    for (var r=0;r<8;r++){var e=0;for(var c=0;c<8;c++){if(grid[r][c]){if(e){fen+=e;e=0;}fen+=grid[r][c];}else e++;}if(e)fen+=e;if(r<7)fen+='/';}" +
+            "    var fen=''; for(var r=0;r<8;r++){var e=0;for(var c=0;c<8;c++){if(grid[r][c]){if(e){fen+=e;e=0;}fen+=grid[r][c];}else e++;}if(e)fen+=e;if(r<7)fen+='/';}" +
             "    var all=document.querySelectorAll('u8t,kwdb,m2'); var idx=-1;" +
             "    all.forEach(function(m,i){if(m.classList.contains('a1t'))idx=i;});" +
-            "    var turn = idx>=0 ? (idx%2===0?'b':'w') : 'w';" +
-            "    return fen + ' ' + turn + ' - - 0 1';" +
+            "    var turn=idx>=0?(idx%2===0?'b':'w'):'w';" +
+            "    return fen+' '+turn+' - - 0 1';" +
             "  }";
     }
 

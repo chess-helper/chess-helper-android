@@ -1,34 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-    <WebView
-        android:id="@+id/webView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
     <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:orientation="vertical"
-        android:elevation="8dp">
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="#1a1a2e"
+        android:orientation="horizontal"
+        android:padding="4dp">
+
+        <EditText
+            android:id="@+id/urlBar"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="#0f0f1a"
+            android:textColor="#ffffff"
+            android:textColorHint="#666666"
+            android:hint="Введите адрес..."
+            android:textSize="12sp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:inputType="textUri"
+            android:imeOptions="actionGo"
+            android:singleLine="true"/>
+
+        <Button
+            android:id="@+id/toggleBtn"
+            android:layout_width="48dp"
+            android:layout_height="match_parent"
+            android:text="✓"
+            android:textSize="16sp"
+            android:backgroundTint="#22c55e"
+            android:textColor="#ffffff"
+            android:layout_marginStart="4dp"/>
+
         <Button
             android:id="@+id/switchSiteBtn"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_height="match_parent"
             android:text="chess.com"
-            android:textSize="11sp"
-            android:backgroundTint="#CC1a1a2e"
+            android:textSize="10sp"
+            android:backgroundTint="#1e3a5f"
             android:textColor="#3b82f6"
-            android:layout_marginBottom="8dp"/>
+            android:layout_marginStart="4dp"/>
+
         <Button
             android:id="@+id/settingsBtn"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="40dp"
+            android:layout_height="match_parent"
             android:text="⚙"
-            android:textSize="20sp"
-            android:backgroundTint="#CC1a1a2e"
-            android:textColor="#4caf50"/>
+            android:textSize="16sp"
+            android:backgroundTint="#1a1a2e"
+            android:textColor="#4caf50"
+            android:layout_marginStart="4dp"/>
+
     </LinearLayout>
-</FrameLayout>
+
+    <WebView
+        android:id="@+id/webView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+</LinearLayout>
