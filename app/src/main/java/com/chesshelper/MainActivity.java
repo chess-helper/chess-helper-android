@@ -236,8 +236,8 @@ public class MainActivity extends AppCompatActivity {
                 "    var wc = document.querySelector('wc-chess-board');" +
                 "    if (!wc || !wc.game) { ChessDebug.show('no game'); return; }" +
                 "    var g = wc.game;" +
-                "    var methods = Object.getOwnPropertyNames(Object.getPrototypeOf(g)).filter(function(k){return typeof g[k]==='function';}).join(',');" +
-                "    ChessDebug.show('game methods: ' + methods.substring(0,100));" +
+                "    var ownKeys = Object.getOwnPropertyNames(g).join(',');" +
+                "    ChessDebug.show('game own keys: ' + ownKeys.substring(0,120));" +
                 "  }, 4000);" +
                 "})();",
                 null
