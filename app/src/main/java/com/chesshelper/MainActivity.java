@@ -39,10 +39,15 @@ public class MainActivity extends AppCompatActivity {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
-        settings.setAllowFileAccess(true);
-        settings.setAllowUniversalAccessFromFileURLs(true);
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(false);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        settings.setGeolocationEnabled(false);
+        settings.setMediaPlaybackRequiresUserGesture(true);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            settings.setSafeBrowsingEnabled(true);
+        }
+        WebView.setWebContentsDebuggingEnabled(false);
 
         urlBar = findViewById(R.id.urlBar);
         urlBar.setOnEditorActionListener((v, actionId, event) -> {
