@@ -462,6 +462,13 @@ public class MainActivity extends AppCompatActivity {
             "    var placement=''; for(var r=0;r<8;r++){var e=0;for(var c=0;c<8;c++){if(grid[r][c]){if(e){placement+=e;e=0;}placement+=grid[r][c];}else e++;}if(e)placement+=e;if(r<7)placement+='/';}" +
             "    var pageFen=lichessFenFromPageData(placement);" +
             "    if(pageFen) return pageFen;" +
+            "    if(location.pathname.indexOf('/analysis/standard/')===0) {" +
+            "      try {" +
+            "        var raw=decodeURIComponent(location.pathname.substring('/analysis/standard/'.length));" +
+            "        var urlFen=raw.replace(/_/g,' ');" +
+            "        if(samePlacement(urlFen,placement)) return urlFen;" +
+            "      } catch(e) {}" +
+            "    }" +
             "    if(location.pathname.indexOf('/training')===0) {" +
             "      var turn = flipped ? 'b' : 'w';" +
             "      return placement+' '+turn+' - - 0 1';" +
