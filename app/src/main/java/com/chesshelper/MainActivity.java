@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 urlBar.setText(url);
                 isChessCom = url.contains("chess.com");
-                if (url.contains("lichess.org") || url.contains("chess.com")) {
+                if (url.contains("chess.com") || isSupportedLichessPage(url)) {
                     if (enabled) injectChessHelper();
                 }
                 updateSwitchBtn();
@@ -91,7 +91,10 @@ public class MainActivity extends AppCompatActivity {
             prefs.edit().putBoolean("enabled", enabled).apply();
             updateToggleBtn();
             if (enabled) {
-                injectChessHelper();
+                String currentUrl = webView.getUrl();
+                if (currentUrl != null && (currentUrl.contains("chess.com") || isSupportedLichessPage(currentUrl))) {
+                    injectChessHelper();
+                }
             } else {
                 webView.evaluateJavascript("if(window.__sfWorker){window.__sfWorker.terminate();window.__sfWorker=null;} document.querySelectorAll('#ch-svg,#ch-score').forEach(function(e){e.remove();});", null);
             }
@@ -108,6 +111,13 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.settingsBtn).setOnClickListener(v -> showSettings());
 
         webView.loadUrl(isChessCom ? "https://chess.com" : "https://lichess.org");
+    }
+
+    private boolean isSupportedLichessPage(String url) {
+        if (url == null || !url.contains("lichess.org")) return false;
+        return url.contains("/training")
+                || url.contains("/analysis")
+                || url.contains("/study/");
     }
 
     private void updateToggleBtn() {
@@ -314,6 +324,27 @@ public class MainActivity extends AppCompatActivity {
     private String getLichessFen() {
         return
             "  function isFlipped() { return document.querySelector('.cg-wrap') && document.querySelector('.cg-wrap').classList.contains('orientation-black'); }" +
+            "  function samePlacement(fen, placement) { return typeof fen === 'string' && fen.split(' ')[0] === placement; }" +
+            "  function findMatchingFen(obj, placement, seen) {" +
+            "    if (!obj || typeof obj !== 'object') return null;" +
+            "    if (!seen) seen = new Set(); if (seen.has(obj)) return null; seen.add(obj);" +
+            "    if (typeof obj.fen === 'string' && samePlacement(obj.fen, placement)) return obj.fen;" +
+            "    if (Array.isArray(obj)) {" +
+            "      for (var i=obj.length-1;i>=0;i--){var f=findMatchingFen(obj[i],placement,seen);if(f)return f;}" +
+            "    } else {" +
+            "      var keys=Object.keys(obj);" +
+            "      for (var k=keys.length-1;k>=0;k--){var v=obj[keys[k]];if(v&&typeof v==='object'){var f=findMatchingFen(v,placement,seen);if(f)return f;}}" +
+            "    } return null;" +
+            "  }" +
+            "  function lichessFenFromPageData(placement) {" +
+            "    var direct=document.querySelectorAll('[data-fen]');" +
+            "    for(var i=direct.length-1;i>=0;i--){var f=direct[i].getAttribute('data-fen');if(samePlacement(f,placement))return f;}" +
+            "    var init=document.getElementById('page-init-data');" +
+            "    if(init){try{var data=JSON.parse(init.textContent||init.innerText||'{}');var f=findMatchingFen(data,placement);if(f)return f;}catch(e){}}" +
+            "    var legacy=document.getElementById('lichess-game-data');" +
+            "    if(legacy){try{var data2=JSON.parse(legacy.textContent||legacy.innerText||'{}');var f2=findMatchingFen(data2,placement);if(f2)return f2;}catch(e){}}" +
+            "    return null;" +
+            "  }" +
             "  function getFen() {" +
             "    var board = document.querySelector('cg-board');" +
             "    if (!board) return null;" +
@@ -336,11 +367,14 @@ public class MainActivity extends AppCompatActivity {
             "      var ch=m[type]; if(!ch) return;" +
             "      grid[gr][gc]=color==='white'?ch.toUpperCase():ch;" +
             "    });" +
-            "    var fen=''; for(var r=0;r<8;r++){var e=0;for(var c=0;c<8;c++){if(grid[r][c]){if(e){fen+=e;e=0;}fen+=grid[r][c];}else e++;}if(e)fen+=e;if(r<7)fen+='/';}" +
-            "    var all=document.querySelectorAll('u8t,kwdb,m2'); var idx=-1;" +
-            "    all.forEach(function(m,i){if(m.classList.contains('a1t'))idx=i;});" +
-            "    var turn=idx>=0?(idx%2===0?'b':'w'):'w';" +
-            "    return fen+' '+turn+' - - 0 1';" +
+            "    var placement=''; for(var r=0;r<8;r++){var e=0;for(var c=0;c<8;c++){if(grid[r][c]){if(e){placement+=e;e=0;}placement+=grid[r][c];}else e++;}if(e)placement+=e;if(r<7)placement+='/';}" +
+            "    var pageFen=lichessFenFromPageData(placement);" +
+            "    if(pageFen) return pageFen;" +
+            "    if(location.pathname.indexOf('/training')===0) {" +
+            "      var turn = flipped ? 'b' : 'w';" +
+            "      return placement+' '+turn+' - - 0 1';" +
+            "    }" +
+            "    return null;" +
             "  }";
     }
 
