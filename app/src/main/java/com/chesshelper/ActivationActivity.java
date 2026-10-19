@@ -103,7 +103,7 @@ public class ActivationActivity extends AppCompatActivity {
         checkStatus();
     }
 
-    private String getDeviceId() {
+    private String getLicenseDeviceId() {
         String deviceId = prefs.getString("device_id", null);
         if (deviceId == null || deviceId.isEmpty()) {
             deviceId = "android_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
@@ -119,7 +119,7 @@ public class ActivationActivity extends AppCompatActivity {
         continueBtn.setEnabled(false);
 
         HttpUrl url = HttpUrl.parse(API_URL + "/status").newBuilder()
-                .addQueryParameter("device_id", getDeviceId())
+                .addQueryParameter("device_id", getLicenseDeviceId())
                 .build();
 
         Request request = new Request.Builder().url(url).get().build();
@@ -238,7 +238,7 @@ public class ActivationActivity extends AppCompatActivity {
     private void activateCode(String code) {
         HttpUrl url = HttpUrl.parse(API_URL + "/verify").newBuilder()
                 .addQueryParameter("code", code)
-                .addQueryParameter("device_id", getDeviceId())
+                .addQueryParameter("device_id", getLicenseDeviceId())
                 .build();
 
         Request request = new Request.Builder().url(url).get().build();
