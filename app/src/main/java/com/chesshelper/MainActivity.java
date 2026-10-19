@@ -517,14 +517,22 @@ public class MainActivity extends AppCompatActivity {
             "  }" +
 
             "  function currentPly() {" +
-            "    var active=document.querySelector('.analyse__moves .active, .round__app .active, move.active, .active[data-ply], [data-ply].active');" +
-            "    if(active){" +
-            "      var dp=active.getAttribute('data-ply'); if(dp!==null){var n=parseInt(dp,10);if(!isNaN(n))return n;}" +
+            "    var cur=document.querySelector('z7yx.a1t, Z7YX.a1t');" +
+            "    if(cur){" +
+            "      var n=cur.previousElementSibling,offset=0;" +
+            "      while(n){" +
+            "        var tag=(n.tagName||'').toLowerCase();" +
+            "        if(tag==='qzm'){" +
+            "          var moveNo=parseInt(n.textContent||'',10);" +
+            "          if(!isNaN(moveNo)) return 2*moveNo-1+offset;" +
+            "          break;" +
+            "        }" +
+            "        if(tag==='z7yx') offset++;" +
+            "        n=n.previousElementSibling;" +
+            "      }" +
             "    }" +
-            "    var all=document.querySelectorAll('[data-ply]');" +
-            "    if(all.length){var last=all[all.length-1],v=parseInt(last.getAttribute('data-ply'),10);if(!isNaN(v))return v;}" +
-            "    var moves=document.querySelectorAll('move, .analyse__moves move, .round__app move');" +
-            "    if(moves.length) return moves.length;" +
+            "    var list=document.querySelectorAll('app z7yx, i5d z7yx, z7yx');" +
+            "    if(list.length)return list.length;" +
             "    return null;" +
             "  }" +
 
