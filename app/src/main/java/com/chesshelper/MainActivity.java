@@ -292,7 +292,7 @@ public class MainActivity extends AppCompatActivity {
             "  sf.onmessage = function(e) {" +
             "    var line = e.data;" +
             "    if (line === 'uciok') { sf.postMessage('setoption name MultiPV value ' + LINES); sf.postMessage('isready'); }" +
-            "    else if (line === 'readyok') { setInterval(checkPos, 1000); }" +
+            "    else if (line === 'readyok') { setInterval(checkPos, 300); }" +
             "    else if (line.indexOf(' pv ') >= 0) {" +
             "      var pvM = line.match(/ pv ([a-h][1-8][a-h][1-8][qrbn]?)/);" +
             "      var mpM = line.match(/ multipv (\\d+)/);" +
@@ -434,22 +434,73 @@ public class MainActivity extends AppCompatActivity {
             "    }" +
             "    return null;" +
             "  }" +
+            "  function hasAiMarker(obj, seen) {" +
+            "    if(!obj || typeof obj!=='object') return false;" +
+            "    if(!seen) seen=new Set(); if(seen.has(obj)) return false; seen.add(obj);" +
+            "    var keys=Object.keys(obj);" +
+            "    for(var i=0;i<keys.length;i++){" +
+            "      var k=keys[i], v=obj[k];" +
+            "      if((k==='source' && v==='ai') || ((k==='aiLevel'||k==='ai') && typeof v==='number')) return true;" +
+            "      if(v && typeof v==='object' && hasAiMarker(v,seen)) return true;" +
+            "    }" +
+            "    return false;" +
+            "  }" +
             "  function isLichessAiGame(data) {" +
-            "    if(!data || typeof data!=='object') return false;" +
-            "    try {" +
-            "      if(data.game && (data.game.source==='ai' || typeof data.game.aiLevel==='number')) return true;" +
-            "      if(data.source==='ai' || typeof data.aiLevel==='number') return true;" +
-            "      if(data.player && typeof data.player.aiLevel==='number') return true;" +
-            "      if(data.opponent && typeof data.opponent.aiLevel==='number') return true;" +
-            "      if(data.white && typeof data.white.aiLevel==='number') return true;" +
-            "      if(data.black && typeof data.black.aiLevel==='number') return true;" +
-            "    } catch(e) {}" +
+            "    if(hasAiMarker(data)) return true;" +
+            "    var scripts=document.querySelectorAll('script[type="application/json"],#page-init-data,#lichess-game-data');" +
+            "    for(var i=0;i<scripts.length;i++){" +
+            "      var txt=scripts[i].textContent||'';" +
+            "      if(txt.indexOf('"source":"ai"')>=0 || /"aiLevel"\s*:\s*\d+/.test(txt)) return true;" +
+            "    }" +
             "    return false;" +
             "  }" +
             "  function isAllowedLichessMode(data) {" +
             "    var p=location.pathname;" +
             "    if(p.indexOf('/training')===0 || p.indexOf('/analysis')===0 || p.indexOf('/study/')===0) return true;" +
             "    return isLichessAiGame(data);" +
+            "  }" +
+            "  function currentRoundPly() {" +
+            "    var cur=document.querySelector('z7yx.a1t, Z7YX.a1t');" +
+            "    if(!cur) return null;" +
+            "    var n=cur.previousElementSibling; var offset=0;" +
+            "    while(n){" +
+            "      if(n.tagName && n.tagName.toLowerCase()==='qzm'){" +
+            "        var moveNo=parseInt(n.textContent||'',10);" +
+            "        if(!isNaN(moveNo)) return 2*moveNo-1+offset;" +
+            "        return null;" +
+            "      }" +
+            "      if(n.tagName && n.tagName.toLowerCase()==='z7yx') offset++;" +
+            "      n=n.previousElementSibling;" +
+            "    }" +
+            "    return null;" +
+            "  }" +
+            "  function sanitizeCastling(rights,placement) {" +
+            "    if(!rights || rights==='-') return '-';" +
+            "    var rows=placement.split('/'); if(rows.length!==8) return '-';" +
+            "    function pieceAt(file,rank){var row=rows[8-rank],x=0;for(var i=0;i<row.length;i++){var ch=row[i];if(/\d/.test(ch))x+=parseInt(ch,10);else{if(x===file)return ch;x++;}}return null;}" +
+            "    var out='';" +
+            "    if(rights.indexOf('K')>=0 && pieceAt(4,1)==='K' && pieceAt(7,1)==='R') out+='K';" +
+            "    if(rights.indexOf('Q')>=0 && pieceAt(4,1)==='K' && pieceAt(0,1)==='R') out+='Q';" +
+            "    if(rights.indexOf('k')>=0 && pieceAt(4,8)==='k' && pieceAt(7,8)==='r') out+='k';" +
+            "    if(rights.indexOf('q')>=0 && pieceAt(4,8)==='k' && pieceAt(0,8)==='r') out+='q';" +
+            "    return out||'-';" +
+            "  }" +
+            "  function rememberFen(fen,placement) {" +
+            "    if(!fen) return null;" +
+            "    window.__chFenState={fen:fen,placement:placement};" +
+            "    return fen;" +
+            "  }" +
+            "  function fallbackFen(placement) {" +
+            "    var s=window.__chFenState;" +
+            "    if(!s || !s.fen) return null;" +
+            "    if(s.placement===placement) return s.fen;" +
+            "    var parts=s.fen.split(' ');" +
+            "    var ply=currentRoundPly();" +
+            "    var turn=ply===null ? (parts[1]==='w'?'b':'w') : (ply%2===0?'w':'b');" +
+            "    var rights=sanitizeCastling(parts[2]||'-',placement);" +
+            "    var full=placement+' '+turn+' '+rights+' - 0 1';" +
+            "    window.__chFenState={fen:full,placement:placement};" +
+            "    return full;" +
             "  }" +
             "  function getFen() {" +
             "    var lichessData=readLichessData();" +
@@ -477,19 +528,19 @@ public class MainActivity extends AppCompatActivity {
             "    });" +
             "    var placement=''; for(var r=0;r<8;r++){var e=0;for(var c=0;c<8;c++){if(grid[r][c]){if(e){placement+=e;e=0;}placement+=grid[r][c];}else e++;}if(e)placement+=e;if(r<7)placement+='/';}" +
             "    var pageFen=lichessFenFromPageData(placement);" +
-            "    if(pageFen) return pageFen;" +
+            "    if(pageFen) return rememberFen(pageFen,placement);" +
             "    if(location.pathname.indexOf('/analysis/standard/')===0) {" +
             "      try {" +
             "        var raw=decodeURIComponent(location.pathname.substring('/analysis/standard/'.length));" +
             "        var urlFen=raw.replace(/_/g,' ');" +
-            "        if(samePlacement(urlFen,placement)) return urlFen;" +
+            "        if(samePlacement(urlFen,placement)) return rememberFen(urlFen,placement);" +
             "      } catch(e) {}" +
             "    }" +
             "    if(location.pathname.indexOf('/training')===0) {" +
             "      var turn = flipped ? 'b' : 'w';" +
-            "      return placement+' '+turn+' - - 0 1';" +
+            "      return rememberFen(placement+' '+turn+' - - 0 1',placement);" +
             "    }" +
-            "    return null;" +
+            "    return fallbackFen(placement);" +
             "  }";
     }
 
