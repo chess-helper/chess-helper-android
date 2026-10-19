@@ -66,18 +66,18 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 urlBar.setText(url);
                 isChessCom = url.contains("chess.com");
-                if (url.contains("chess.com") || isSupportedLichessPage(url, view.getTitle())) {
+                if (url.contains("chess.com") || url.contains("lichess.org")) {
                     if (enabled) injectChessHelper();
                 }
                 updateSwitchBtn();
             }
             @Override
             public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
-                if (!url.equals(lastUrl) && url.contains("chess.com")) {
+                if (!url.equals(lastUrl) && (url.contains("chess.com") || url.contains("lichess.org"))) {
                     lastUrl = url;
                     new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
                         if (enabled) injectChessHelper();
-                    }, 2000);
+                    }, 1200);
                 }
             }
         });
@@ -92,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
             updateToggleBtn();
             if (enabled) {
                 String currentUrl = webView.getUrl();
-                if (currentUrl != null && (currentUrl.contains("chess.com") || isSupportedLichessPage(currentUrl, webView.getTitle()))) {
+                if (currentUrl != null && (currentUrl.contains("chess.com") || currentUrl.contains("lichess.org"))) {
                     injectChessHelper();
                 }
             } else {
@@ -112,17 +112,6 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.settingsBtn).setOnClickListener(v -> showSettings());
 
         webView.loadUrl(isChessCom ? "https://chess.com" : "https://lichess.org");
-    }
-
-    private boolean isSupportedLichessPage(String url, String title) {
-        if (url == null || !url.contains("lichess.org")) return false;
-        if (url.contains("/training")
-                || url.contains("/analysis")
-                || url.contains("/study/")) {
-            return true;
-        }
-        String t = title == null ? "" : title.toLowerCase();
-        return t.contains("lichess ai") || t.contains("computer");
     }
 
     private void updateToggleBtn() {
@@ -437,7 +426,34 @@ public class MainActivity extends AppCompatActivity {
             "    if(legacy){try{var data2=JSON.parse(legacy.textContent||legacy.innerText||'{}');var f2=findMatchingFen(data2,placement);if(f2)return f2;}catch(e){}}" +
             "    return null;" +
             "  }" +
+            "  function readLichessData() {" +
+            "    var ids=['page-init-data','lichess-game-data'];" +
+            "    for(var i=0;i<ids.length;i++){" +
+            "      var el=document.getElementById(ids[i]);" +
+            "      if(el){try{return JSON.parse(el.textContent||el.innerText||'{}');}catch(e){}}" +
+            "    }" +
+            "    return null;" +
+            "  }" +
+            "  function isLichessAiGame(data) {" +
+            "    if(!data || typeof data!=='object') return false;" +
+            "    try {" +
+            "      if(data.game && (data.game.source==='ai' || typeof data.game.aiLevel==='number')) return true;" +
+            "      if(data.source==='ai' || typeof data.aiLevel==='number') return true;" +
+            "      if(data.player && typeof data.player.aiLevel==='number') return true;" +
+            "      if(data.opponent && typeof data.opponent.aiLevel==='number') return true;" +
+            "      if(data.white && typeof data.white.aiLevel==='number') return true;" +
+            "      if(data.black && typeof data.black.aiLevel==='number') return true;" +
+            "    } catch(e) {}" +
+            "    return false;" +
+            "  }" +
+            "  function isAllowedLichessMode(data) {" +
+            "    var p=location.pathname;" +
+            "    if(p.indexOf('/training')===0 || p.indexOf('/analysis')===0 || p.indexOf('/study/')===0) return true;" +
+            "    return isLichessAiGame(data);" +
+            "  }" +
             "  function getFen() {" +
+            "    var lichessData=readLichessData();" +
+            "    if(!isAllowedLichessMode(lichessData)) return null;" +
             "    var board = document.querySelector('cg-board');" +
             "    if (!board) return null;" +
             "    var pieces = board.querySelectorAll('piece');" +
