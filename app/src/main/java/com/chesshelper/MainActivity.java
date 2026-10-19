@@ -452,10 +452,29 @@ public class MainActivity extends AppCompatActivity {
             "    return false;" +
             "  }" +
 
-            "  function isAllowedLichessMode(data) {" +
+            "  function aiFenFromStorage(placement) {" +
+            "    try {" +
+            "      var raw=localStorage.getItem('ceval.fen');" +
+            "      if(!raw)return null;" +
+            "      var parsed=JSON.parse(raw);" +
+            "      var fen=parsed&&typeof parsed.value==='string'?parsed.value:null;" +
+            "      return fen&&samePlacement(fen,placement)?fen:null;" +
+            "    } catch(e){return null;}" +
+            "  }" +
+            "  function domShowsLichessAi() {" +
+            "    var users=document.querySelectorAll('.ruser name, .ruser .name, .ruser');" +
+            "    for(var i=0;i<users.length;i++){" +
+            "      var t=(users[i].textContent||'').toLowerCase();" +
+            "      if(t.indexOf('stockfish')>=0)return true;" +
+            "    }" +
+            "    return false;" +
+            "  }" +
+            "  function isAllowedLichessMode(data,placement) {" +
             "    var p=location.pathname;" +
             "    if(p.indexOf('/training')===0 || p.indexOf('/analysis')===0 || p.indexOf('/study/')===0) return true;" +
-            "    return hasAiMarker(data);" +
+            "    if(hasAiMarker(data)) return true;" +
+            "    if(domShowsLichessAi()) return true;" +
+            "    return !!aiFenFromStorage(placement);" +
             "  }" +
 
             "  function boardPlacement() {" +
@@ -511,6 +530,8 @@ public class MainActivity extends AppCompatActivity {
 
             "  function universalLichessFen(data) {" +
             "    var placement=boardPlacement(); if(!placement)return null;" +
+            "    var aiStored=aiFenFromStorage(placement);" +
+            "    if(aiStored){window.__chFenState={fen:aiStored,placement:placement};return aiStored;}" +
             "    var exact=pageFenForPlacement(placement,data);" +
             "    if(exact){window.__chFenState={fen:exact,placement:placement};return exact;}" +
 
@@ -529,6 +550,7 @@ public class MainActivity extends AppCompatActivity {
             "    if(ply!==null)turn=(ply%2===0?'w':'b');" +
             "    else if(prev&&prev.fen){var pp=prev.fen.split(' ');turn=(pp[1]==='w'?'b':'w');}" +
             "    else if(location.pathname.indexOf('/training')===0)turn=isFlipped()?'b':'w';" +
+            "    else if(placement==='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR')turn='w';" +
             "    if(!turn)return null;" +
             "    var rights='-';" +
             "    if(prev&&prev.fen){var pparts=prev.fen.split(' ');rights=sanitizeCastling(pparts[2]||'-',placement);}" +
@@ -539,10 +561,10 @@ public class MainActivity extends AppCompatActivity {
 
             "  function getFen() {" +
             "    var data=readLichessData();" +
-            "    var fen=universalLichessFen(data);" +
-            "    if(!fen)return null;" +
-            "    if(!isAllowedLichessMode(data))return null;" +
-            "    return fen;" +
+            "    var placement=boardPlacement();" +
+            "    if(!placement)return null;" +
+            "    if(!isAllowedLichessMode(data,placement))return null;" +
+            "    return universalLichessFen(data);" +
             "  }";
     }
 
