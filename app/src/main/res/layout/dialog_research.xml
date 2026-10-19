@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="#1a1a2e">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Откройте любую позицию для исследования в режиме анализа."
+        android:textColor="#cccccc"
+        android:textSize="14sp"
+        android:layout_marginBottom="12dp"/>
+
+    <RadioGroup
+        android:id="@+id/researchModeGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="12dp">
+
+        <RadioButton
+            android:id="@+id/modeFen"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="FEN"
+            android:textColor="#ffffff"
+            android:buttonTint="#f59e0b"/>
+
+        <RadioButton
+            android:id="@+id/modePgn"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="PGN"
+            android:textColor="#ffffff"
+            android:buttonTint="#f59e0b"/>
+    </RadioGroup>
+
+    <EditText
+        android:id="@+id/researchInput"
+        android:layout_width="match_parent"
+        android:layout_height="140dp"
+        android:gravity="top|start"
+        android:hint="Вставьте FEN или PGN..."
+        android:textColor="#ffffff"
+        android:textColorHint="#777777"
+        android:background="@drawable/input_background"
+        android:padding="12dp"
+        android:textSize="13sp"
+        android:inputType="textMultiLine"
+        android:scrollbars="vertical"/>
+</LinearLayout>
