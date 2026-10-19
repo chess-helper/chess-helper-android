@@ -108,6 +108,7 @@ public class MainActivity extends AppCompatActivity {
             webView.loadUrl(isChessCom ? "https://chess.com" : "https://lichess.org");
         });
 
+        findViewById(R.id.researchBtn).setOnClickListener(v -> showResearchMode());
         findViewById(R.id.settingsBtn).setOnClickListener(v -> showSettings());
 
         webView.loadUrl(isChessCom ? "https://chess.com" : "https://lichess.org");
@@ -139,6 +140,93 @@ public class MainActivity extends AppCompatActivity {
             switchBtn.setText("chess.com");
             switchBtn.setTextColor(0xFF3B82F6);
         }
+    }
+
+    private void showResearchMode() {
+        View view = getLayoutInflater().inflate(R.layout.dialog_research, null);
+        EditText input = view.findViewById(R.id.researchInput);
+        RadioGroup modeGroup = view.findViewById(R.id.researchModeGroup);
+        modeGroup.check(R.id.modeFen);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+            .setTitle("Research / Analysis")
+            .setView(view)
+            .setPositiveButton("Открыть", null)
+            .setNegativeButton("Отмена", null)
+            .create();
+
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                String text = input.getText().toString().trim();
+                if (text.isEmpty()) {
+                    input.setError("Введите FEN или PGN");
+                    return;
+                }
+
+                if (modeGroup.getCheckedRadioButtonId() == R.id.modeFen) {
+                    if (!looksLikeFen(text)) {
+                        input.setError("Похоже, это не FEN");
+                        return;
+                    }
+                    openFenInAnalysis(text);
+                } else {
+                    openPgnInAnalysis(text);
+                }
+                dialog.dismiss();
+            });
+        });
+        dialog.show();
+    }
+
+    private boolean looksLikeFen(String fen) {
+        String[] parts = fen.trim().split("\\s+");
+        if (parts.length < 2) return false;
+        String[] ranks = parts[0].split("/");
+        if (ranks.length != 8) return false;
+
+        for (String rank : ranks) {
+            int squares = 0;
+            for (int i = 0; i < rank.length(); i++) {
+                char ch = rank.charAt(i);
+                if (ch >= '1' && ch <= '8') squares += ch - '0';
+                else if ("prnbqkPRNBQK".indexOf(ch) >= 0) squares++;
+                else return false;
+            }
+            if (squares != 8) return false;
+        }
+        return "w".equals(parts[1]) || "b".equals(parts[1]);
+    }
+
+    private void openFenInAnalysis(String fen) {
+        String normalized = fen.trim().replaceAll("\\s+", "_");
+        isChessCom = false;
+        prefs.edit().putBoolean("isChessCom", false).apply();
+        updateSwitchBtn();
+        webView.loadUrl("https://lichess.org/analysis/standard/" + normalized);
+    }
+
+    private void openPgnInAnalysis(String pgn) {
+        isChessCom = false;
+        prefs.edit().putBoolean("isChessCom", false).apply();
+        updateSwitchBtn();
+        webView.loadUrl("https://lichess.org/paste");
+
+        final String escaped = pgn
+                .replace("\\", "\\\\")
+                .replace("'", "\\'")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
+
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            String script = "(function(){"
+                    + "var t=document.querySelector('textarea');"
+                    + "if(!t)return;"
+                    + "t.value='" + escaped + "';"
+                    + "t.dispatchEvent(new Event('input',{bubbles:true}));"
+                    + "})();";
+            webView.evaluateJavascript(script, null);
+            Toast.makeText(this, "PGN вставлен. Запустите анализ на странице Lichess.", Toast.LENGTH_LONG).show();
+        }, 1800);
     }
 
     private void showSettings() {
