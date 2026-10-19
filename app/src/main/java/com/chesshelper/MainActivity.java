@@ -313,6 +313,18 @@ public class MainActivity extends AppCompatActivity {
             "    }" +
             "  };" +
             "  sf.postMessage('uci');" +
+            "  if (location.hostname.indexOf('lichess.org')>=0) {" +
+            "    setInterval(function(){" +
+            "      try{" +
+            "        if(typeof universalLichessFen!=='function')return;" +
+            "        var d=typeof readLichessData==='function'?readLichessData():null;" +
+            "        var tf=universalLichessFen(d);" +
+            "        var el=document.getElementById('ch-tracker-debug');" +
+            "        if(!el){el=document.createElement('div');el.id='ch-tracker-debug';el.style.cssText='position:fixed;right:6px;bottom:6px;z-index:99999;background:rgba(0,0,0,.78);color:#fff;font:11px monospace;padding:4px 6px;border-radius:4px;pointer-events:none;max-width:70vw;';document.body.appendChild(el);}" +
+            "        el.textContent=tf?('TRACK OK | '+tf):'TRACK WAIT';" +
+            "      }catch(e){}" +
+            "    },500);" +
+            "  }" +
             "  function checkPos() {" +
             "    var fen = getFen();" +
             "    if (!fen || fen === lastFen) return;" +
