@@ -48,6 +48,17 @@
             android:layout_marginStart="4dp"/>
 
         <Button
+            android:id="@+id/researchBtn"
+            android:layout_width="40dp"
+            android:layout_height="match_parent"
+            android:text="R"
+            android:textStyle="bold"
+            android:textSize="14sp"
+            android:backgroundTint="#1a1a2e"
+            android:textColor="#f59e0b"
+            android:layout_marginStart="4dp"/>
+
+        <Button
             android:id="@+id/settingsBtn"
             android:layout_width="40dp"
             android:layout_height="match_parent"
