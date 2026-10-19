@@ -1,58 +1,119 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="32dp"
+    android:fillViewport="true"
     android:background="#0f0f1a">
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="♟"
-        android:textSize="64sp"
-        android:layout_marginBottom="16dp"/>
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Chess Helper"
-        android:textSize="28sp"
-        android:textColor="#ffffff"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp"/>
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Введите код активации"
-        android:textSize="14sp"
-        android:textColor="#888888"
-        android:layout_marginBottom="32dp"/>
-    <EditText
-        android:id="@+id/codeInput"
+
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:hint="XXXX-XXXX-XXXX"
-        android:textColor="#ffffff"
-        android:textColorHint="#555555"
-        android:textSize="20sp"
+        android:layout_height="wrap_content"
+        android:minHeight="match_parent"
+        android:orientation="vertical"
         android:gravity="center"
-        android:inputType="textCapCharacters"
-        android:background="@drawable/input_background"
-        android:layout_marginBottom="16dp"
-        android:padding="12dp"/>
-    <Button
-        android:id="@+id/activateBtn"
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:text="Активировать"
-        android:textSize="16sp"
-        android:textColor="#ffffff"
-        android:backgroundTint="#4caf50"
-        android:layout_marginBottom="16dp"/>
-    <TextView
-        android:id="@+id/msgText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="14sp"
-        android:gravity="center"/>
-</LinearLayout>
+        android:padding="28dp">
+
+        <ImageView
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:src="@mipmap/ic_launcher"
+            android:contentDescription="AlexChessPro"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="AlexChessPro"
+            android:textSize="30sp"
+            android:textColor="#ffffff"
+            android:textStyle="bold"
+            android:layout_marginBottom="6dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Chess.com • Lichess"
+            android:textSize="14sp"
+            android:textColor="#8b93a7"
+            android:layout_marginBottom="26dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="18dp"
+            android:background="@drawable/input_background"
+            android:layout_marginBottom="18dp">
+
+            <TextView
+                android:id="@+id/statusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Проверяем доступ..."
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#ffffff"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/trialTimeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="14sp"
+                android:textColor="#b8c0d0" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/continueBtn"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Продолжить"
+            android:textSize="16sp"
+            android:textColor="#ffffff"
+            android:enabled="false"
+            android:backgroundTint="#2563eb"
+            android:layout_marginBottom="24dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Активация полной версии"
+            android:textSize="16sp"
+            android:textColor="#ffffff"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp" />
+
+        <EditText
+            android:id="@+id/codeInput"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:hint="XXXX-XXXX-XXXX"
+            android:textColor="#ffffff"
+            android:textColorHint="#555555"
+            android:textSize="20sp"
+            android:gravity="center"
+            android:inputType="textCapCharacters"
+            android:background="@drawable/input_background"
+            android:layout_marginBottom="12dp"
+            android:padding="12dp" />
+
+        <Button
+            android:id="@+id/activateBtn"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Активировать"
+            android:textSize="16sp"
+            android:textColor="#ffffff"
+            android:backgroundTint="#22c55e"
+            android:layout_marginBottom="14dp" />
+
+        <TextView
+            android:id="@+id/msgText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:gravity="center" />
+
+    </LinearLayout>
+</ScrollView>
