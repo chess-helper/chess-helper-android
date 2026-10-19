@@ -406,26 +406,7 @@ public class MainActivity extends AppCompatActivity {
         return
             "  function isFlipped() { return document.querySelector('.cg-wrap') && document.querySelector('.cg-wrap').classList.contains('orientation-black'); }" +
             "  function samePlacement(fen, placement) { return typeof fen === 'string' && fen.split(' ')[0] === placement; }" +
-            "  function findMatchingFen(obj, placement, seen) {" +
-            "    if (!obj || typeof obj !== 'object') return null;" +
-            "    if (!seen) seen = new Set(); if (seen.has(obj)) return null; seen.add(obj);" +
-            "    if (typeof obj.fen === 'string' && samePlacement(obj.fen, placement)) return obj.fen;" +
-            "    if (Array.isArray(obj)) {" +
-            "      for (var i=obj.length-1;i>=0;i--){var f=findMatchingFen(obj[i],placement,seen);if(f)return f;}" +
-            "    } else {" +
-            "      var keys=Object.keys(obj);" +
-            "      for (var k=keys.length-1;k>=0;k--){var v=obj[keys[k]];if(v&&typeof v==='object'){var f=findMatchingFen(v,placement,seen);if(f)return f;}}" +
-            "    } return null;" +
-            "  }" +
-            "  function lichessFenFromPageData(placement) {" +
-            "    var direct=document.querySelectorAll('[data-fen]');" +
-            "    for(var i=direct.length-1;i>=0;i--){var f=direct[i].getAttribute('data-fen');if(samePlacement(f,placement))return f;}" +
-            "    var init=document.getElementById('page-init-data');" +
-            "    if(init){try{var data=JSON.parse(init.textContent||init.innerText||'{}');var f=findMatchingFen(data,placement);if(f)return f;}catch(e){}}" +
-            "    var legacy=document.getElementById('lichess-game-data');" +
-            "    if(legacy){try{var data2=JSON.parse(legacy.textContent||legacy.innerText||'{}');var f2=findMatchingFen(data2,placement);if(f2)return f2;}catch(e){}}" +
-            "    return null;" +
-            "  }" +
+
             "  function readLichessData() {" +
             "    var ids=['page-init-data','lichess-game-data'];" +
             "    for(var i=0;i<ids.length;i++){" +
@@ -434,113 +415,134 @@ public class MainActivity extends AppCompatActivity {
             "    }" +
             "    return null;" +
             "  }" +
+
+            "  function findMatchingFen(obj, placement, seen) {" +
+            "    if(!obj || typeof obj!=='object') return null;" +
+            "    if(!seen) seen=new Set(); if(seen.has(obj)) return null; seen.add(obj);" +
+            "    if(typeof obj.fen==='string' && samePlacement(obj.fen,placement)) return obj.fen;" +
+            "    if(Array.isArray(obj)){" +
+            "      for(var i=obj.length-1;i>=0;i--){var f=findMatchingFen(obj[i],placement,seen);if(f)return f;}" +
+            "    } else {" +
+            "      var keys=Object.keys(obj);" +
+            "      for(var k=keys.length-1;k>=0;k--){var v=obj[keys[k]];if(v&&typeof v==='object'){var f2=findMatchingFen(v,placement,seen);if(f2)return f2;}}" +
+            "    }" +
+            "    return null;" +
+            "  }" +
+
+            "  function pageFenForPlacement(placement,data) {" +
+            "    var direct=document.querySelectorAll('[data-fen]');" +
+            "    for(var i=direct.length-1;i>=0;i--){var f=direct[i].getAttribute('data-fen');if(samePlacement(f,placement))return f;}" +
+            "    var found=findMatchingFen(data,placement); if(found) return found;" +
+            "    var scripts=document.querySelectorAll('script[type=\"application/json\"]');" +
+            "    for(var j=scripts.length-1;j>=0;j--){" +
+            "      try{var d=JSON.parse(scripts[j].textContent||'{}');var f2=findMatchingFen(d,placement);if(f2)return f2;}catch(e){}" +
+            "    }" +
+            "    return null;" +
+            "  }" +
+
             "  function hasAiMarker(obj, seen) {" +
             "    if(!obj || typeof obj!=='object') return false;" +
             "    if(!seen) seen=new Set(); if(seen.has(obj)) return false; seen.add(obj);" +
             "    var keys=Object.keys(obj);" +
             "    for(var i=0;i<keys.length;i++){" +
-            "      var k=keys[i], v=obj[k];" +
-            "      if((k==='source' && v==='ai') || ((k==='aiLevel'||k==='ai') && typeof v==='number')) return true;" +
-            "      if(v && typeof v==='object' && hasAiMarker(v,seen)) return true;" +
+            "      var k=keys[i],v=obj[k];" +
+            "      if((k==='source'&&v==='ai')||((k==='aiLevel'||k==='ai')&&typeof v==='number')) return true;" +
+            "      if(v&&typeof v==='object'&&hasAiMarker(v,seen)) return true;" +
             "    }" +
             "    return false;" +
             "  }" +
-            "  function isLichessAiGame(data) {" +
-            "    if(hasAiMarker(data)) return true;" +
-            "    var scripts=document.querySelectorAll('script[type="application/json"],#page-init-data,#lichess-game-data');" +
-            "    for(var i=0;i<scripts.length;i++){" +
-            "      var txt=scripts[i].textContent||'';" +
-            "      if(txt.indexOf('"source":"ai"')>=0 || /"aiLevel"\s*:\s*\d+/.test(txt)) return true;" +
-            "    }" +
-            "    return false;" +
-            "  }" +
+
             "  function isAllowedLichessMode(data) {" +
             "    var p=location.pathname;" +
             "    if(p.indexOf('/training')===0 || p.indexOf('/analysis')===0 || p.indexOf('/study/')===0) return true;" +
-            "    return isLichessAiGame(data);" +
+            "    return hasAiMarker(data);" +
             "  }" +
-            "  function currentRoundPly() {" +
-            "    var cur=document.querySelector('z7yx.a1t, Z7YX.a1t');" +
-            "    if(!cur) return null;" +
-            "    var n=cur.previousElementSibling; var offset=0;" +
-            "    while(n){" +
-            "      if(n.tagName && n.tagName.toLowerCase()==='qzm'){" +
-            "        var moveNo=parseInt(n.textContent||'',10);" +
-            "        if(!isNaN(moveNo)) return 2*moveNo-1+offset;" +
-            "        return null;" +
-            "      }" +
-            "      if(n.tagName && n.tagName.toLowerCase()==='z7yx') offset++;" +
-            "      n=n.previousElementSibling;" +
+
+            "  function boardPlacement() {" +
+            "    var board=document.querySelector('cg-board');" +
+            "    if(!board) return null;" +
+            "    var pieces=board.querySelectorAll('piece');" +
+            "    if(!pieces.length) return null;" +
+            "    var flipped=isFlipped(), bw=board.clientWidth||480;" +
+            "    var grid=[]; for(var i=0;i<8;i++)grid.push([null,null,null,null,null,null,null,null]);" +
+            "    pieces.forEach(function(p){" +
+            "      var cls=Array.from(p.classList);" +
+            "      var color=cls.find(function(x){return x==='white'||x==='black';});" +
+            "      var type=cls.find(function(x){return ['king','queen','rook','bishop','knight','pawn'].indexOf(x)>=0;});" +
+            "      if(!color||!type)return;" +
+            "      var st=p.getAttribute('style')||'',col=-1,row=-1;" +
+            "      var pct=st.match(/translate\\(\\s*(\\d+(?:\\.\\d+)?)%\\s*,\\s*(\\d+(?:\\.\\d+)?)%\\s*\\)/);" +
+            "      if(pct){col=Math.round(parseFloat(pct[1])/12.5);row=Math.round(parseFloat(pct[2])/12.5);}" +
+            "      else{var px=st.match(/translate\\(\\s*(\\d+(?:\\.\\d+)?)px\\s*,\\s*(\\d+(?:\\.\\d+)?)px\\s*\\)/);if(px){col=Math.round(parseFloat(px[1])/bw*8);row=Math.round(parseFloat(px[2])/bw*8);}}" +
+            "      if(col<0||col>7||row<0||row>7)return;" +
+            "      var gc=flipped?7-col:col,gr=flipped?7-row:row;" +
+            "      var m={king:'k',queen:'q',rook:'r',bishop:'b',knight:'n',pawn:'p'};" +
+            "      var ch=m[type]; if(!ch)return;" +
+            "      grid[gr][gc]=color==='white'?ch.toUpperCase():ch;" +
+            "    });" +
+            "    var out='';" +
+            "    for(var r=0;r<8;r++){var e=0;for(var c=0;c<8;c++){if(grid[r][c]){if(e){out+=e;e=0;}out+=grid[r][c];}else e++;}if(e)out+=e;if(r<7)out+='/';}" +
+            "    return out;" +
+            "  }" +
+
+            "  function currentPly() {" +
+            "    var active=document.querySelector('.analyse__moves .active, .round__app .active, move.active, .active[data-ply], [data-ply].active');" +
+            "    if(active){" +
+            "      var dp=active.getAttribute('data-ply'); if(dp!==null){var n=parseInt(dp,10);if(!isNaN(n))return n;}" +
             "    }" +
+            "    var all=document.querySelectorAll('[data-ply]');" +
+            "    if(all.length){var last=all[all.length-1],v=parseInt(last.getAttribute('data-ply'),10);if(!isNaN(v))return v;}" +
+            "    var moves=document.querySelectorAll('move, .analyse__moves move, .round__app move');" +
+            "    if(moves.length) return moves.length;" +
             "    return null;" +
             "  }" +
+
             "  function sanitizeCastling(rights,placement) {" +
-            "    if(!rights || rights==='-') return '-';" +
-            "    var rows=placement.split('/'); if(rows.length!==8) return '-';" +
-            "    function pieceAt(file,rank){var row=rows[8-rank],x=0;for(var i=0;i<row.length;i++){var ch=row[i];if(/\d/.test(ch))x+=parseInt(ch,10);else{if(x===file)return ch;x++;}}return null;}" +
+            "    if(!rights||rights==='-')return '-';" +
+            "    var rows=placement.split('/'); if(rows.length!==8)return '-';" +
+            "    function at(file,rank){var row=rows[8-rank],x=0;for(var i=0;i<row.length;i++){var ch=row[i];if(/[1-8]/.test(ch))x+=parseInt(ch,10);else{if(x===file)return ch;x++;}}return null;}" +
             "    var out='';" +
-            "    if(rights.indexOf('K')>=0 && pieceAt(4,1)==='K' && pieceAt(7,1)==='R') out+='K';" +
-            "    if(rights.indexOf('Q')>=0 && pieceAt(4,1)==='K' && pieceAt(0,1)==='R') out+='Q';" +
-            "    if(rights.indexOf('k')>=0 && pieceAt(4,8)==='k' && pieceAt(7,8)==='r') out+='k';" +
-            "    if(rights.indexOf('q')>=0 && pieceAt(4,8)==='k' && pieceAt(0,8)==='r') out+='q';" +
+            "    if(rights.indexOf('K')>=0&&at(4,1)==='K'&&at(7,1)==='R')out+='K';" +
+            "    if(rights.indexOf('Q')>=0&&at(4,1)==='K'&&at(0,1)==='R')out+='Q';" +
+            "    if(rights.indexOf('k')>=0&&at(4,8)==='k'&&at(7,8)==='r')out+='k';" +
+            "    if(rights.indexOf('q')>=0&&at(4,8)==='k'&&at(0,8)==='r')out+='q';" +
             "    return out||'-';" +
             "  }" +
-            "  function rememberFen(fen,placement) {" +
-            "    if(!fen) return null;" +
+
+            "  function universalLichessFen(data) {" +
+            "    var placement=boardPlacement(); if(!placement)return null;" +
+            "    var exact=pageFenForPlacement(placement,data);" +
+            "    if(exact){window.__chFenState={fen:exact,placement:placement};return exact;}" +
+
+            "    if(location.pathname.indexOf('/analysis/standard/')===0){" +
+            "      try{" +
+            "        var raw=decodeURIComponent(location.pathname.substring('/analysis/standard/'.length));" +
+            "        var initial=raw.replace(/_/g,' ');" +
+            "        if(samePlacement(initial,placement)){window.__chFenState={fen:initial,placement:placement};return initial;}" +
+            "      }catch(e){}" +
+            "    }" +
+
+            "    var prev=window.__chFenState;" +
+            "    if(prev&&prev.placement===placement)return prev.fen;" +
+            "    var ply=currentPly();" +
+            "    var turn=null;" +
+            "    if(ply!==null)turn=(ply%2===0?'w':'b');" +
+            "    else if(prev&&prev.fen){var pp=prev.fen.split(' ');turn=(pp[1]==='w'?'b':'w');}" +
+            "    else if(location.pathname.indexOf('/training')===0)turn=isFlipped()?'b':'w';" +
+            "    if(!turn)return null;" +
+            "    var rights='-';" +
+            "    if(prev&&prev.fen){var pparts=prev.fen.split(' ');rights=sanitizeCastling(pparts[2]||'-',placement);}" +
+            "    var fen=placement+' '+turn+' '+rights+' - 0 1';" +
             "    window.__chFenState={fen:fen,placement:placement};" +
             "    return fen;" +
             "  }" +
-            "  function fallbackFen(placement) {" +
-            "    var s=window.__chFenState;" +
-            "    if(!s || !s.fen) return null;" +
-            "    if(s.placement===placement) return s.fen;" +
-            "    var parts=s.fen.split(' ');" +
-            "    var ply=currentRoundPly();" +
-            "    var turn=ply===null ? (parts[1]==='w'?'b':'w') : (ply%2===0?'w':'b');" +
-            "    var rights=sanitizeCastling(parts[2]||'-',placement);" +
-            "    var full=placement+' '+turn+' '+rights+' - 0 1';" +
-            "    window.__chFenState={fen:full,placement:placement};" +
-            "    return full;" +
-            "  }" +
+
             "  function getFen() {" +
-            "    var lichessData=readLichessData();" +
-            "    if(!isAllowedLichessMode(lichessData)) return null;" +
-            "    var board = document.querySelector('cg-board');" +
-            "    if (!board) return null;" +
-            "    var pieces = board.querySelectorAll('piece');" +
-            "    if (!pieces.length) return null;" +
-            "    var flipped = isFlipped(); var bw = board.clientWidth || 480;" +
-            "    var grid = []; for (var i=0;i<8;i++){grid.push([null,null,null,null,null,null,null,null]);}" +
-            "    pieces.forEach(function(p) {" +
-            "      var cls = Array.from(p.classList);" +
-            "      var color = cls.find(function(c){return c==='white'||c==='black';});" +
-            "      var type = cls.find(function(c){return ['king','queen','rook','bishop','knight','pawn'].indexOf(c)>=0;});" +
-            "      if (!color||!type) return;" +
-            "      var style = p.getAttribute('style')||''; var col=-1,row=-1;" +
-            "      var pct = style.match(/translate\\(\\s*(\\d+(?:\\.\\d+)?)%\\s*,\\s*(\\d+(?:\\.\\d+)?)%\\s*\\)/);" +
-            "      if (pct){col=Math.round(parseFloat(pct[1])/12.5);row=Math.round(parseFloat(pct[2])/12.5);}" +
-            "      else{var px=style.match(/translate\\(\\s*(\\d+(?:\\.\\d+)?)px\\s*,\\s*(\\d+(?:\\.\\d+)?)px\\s*\\)/);if(px){col=Math.round(parseFloat(px[1])/bw*8);row=Math.round(parseFloat(px[2])/bw*8);}}" +
-            "      if(col<0||col>7||row<0||row>7) return;" +
-            "      var gc=flipped?7-col:col; var gr=flipped?7-row:row;" +
-            "      var m={king:'k',queen:'q',rook:'r',bishop:'b',knight:'n',pawn:'p'};" +
-            "      var ch=m[type]; if(!ch) return;" +
-            "      grid[gr][gc]=color==='white'?ch.toUpperCase():ch;" +
-            "    });" +
-            "    var placement=''; for(var r=0;r<8;r++){var e=0;for(var c=0;c<8;c++){if(grid[r][c]){if(e){placement+=e;e=0;}placement+=grid[r][c];}else e++;}if(e)placement+=e;if(r<7)placement+='/';}" +
-            "    var pageFen=lichessFenFromPageData(placement);" +
-            "    if(pageFen) return rememberFen(pageFen,placement);" +
-            "    if(location.pathname.indexOf('/analysis/standard/')===0) {" +
-            "      try {" +
-            "        var raw=decodeURIComponent(location.pathname.substring('/analysis/standard/'.length));" +
-            "        var urlFen=raw.replace(/_/g,' ');" +
-            "        if(samePlacement(urlFen,placement)) return rememberFen(urlFen,placement);" +
-            "      } catch(e) {}" +
-            "    }" +
-            "    if(location.pathname.indexOf('/training')===0) {" +
-            "      var turn = flipped ? 'b' : 'w';" +
-            "      return rememberFen(placement+' '+turn+' - - 0 1',placement);" +
-            "    }" +
-            "    return fallbackFen(placement);" +
+            "    var data=readLichessData();" +
+            "    var fen=universalLichessFen(data);" +
+            "    if(!fen)return null;" +
+            "    if(!isAllowedLichessMode(data))return null;" +
+            "    return fen;" +
             "  }";
     }
 
