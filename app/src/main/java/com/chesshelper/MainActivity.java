@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 urlBar.setText(url);
                 isChessCom = url.contains("chess.com");
-                if (url.contains("chess.com") || isSupportedLichessPage(url)) {
+                if (url.contains("chess.com") || isSupportedLichessPage(url, view.getTitle())) {
                     if (enabled) injectChessHelper();
                 }
                 updateSwitchBtn();
@@ -92,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
             updateToggleBtn();
             if (enabled) {
                 String currentUrl = webView.getUrl();
-                if (currentUrl != null && (currentUrl.contains("chess.com") || isSupportedLichessPage(currentUrl))) {
+                if (currentUrl != null && (currentUrl.contains("chess.com") || isSupportedLichessPage(currentUrl, webView.getTitle()))) {
                     injectChessHelper();
                 }
             } else {
@@ -113,11 +113,15 @@ public class MainActivity extends AppCompatActivity {
         webView.loadUrl(isChessCom ? "https://chess.com" : "https://lichess.org");
     }
 
-    private boolean isSupportedLichessPage(String url) {
+    private boolean isSupportedLichessPage(String url, String title) {
         if (url == null || !url.contains("lichess.org")) return false;
-        return url.contains("/training")
+        if (url.contains("/training")
                 || url.contains("/analysis")
-                || url.contains("/study/");
+                || url.contains("/study/")) {
+            return true;
+        }
+        String t = title == null ? "" : title.toLowerCase();
+        return t.contains("lichess ai") || t.contains("computer");
     }
 
     private void updateToggleBtn() {
